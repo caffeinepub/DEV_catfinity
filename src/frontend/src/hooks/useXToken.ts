@@ -15,7 +15,7 @@ interface BackendActor {
     redirectUri: string,
   ) => Promise<{ ok: string } | { err: string }>;
   disconnectX: () => Promise<void>;
-  getClientId: () => Promise<[] | [string]>;
+  getClientId: () => Promise<string | null>;
   setClientId: (id: string) => Promise<void>;
 }
 
@@ -99,8 +99,7 @@ export function useClientId() {
     queryKey: ["clientId"],
     queryFn: async () => {
       if (!actor) return null;
-      const result = await asActor(actor).getClientId();
-      return (result.length > 0 ? result[0] : null) as string | null;
+      return await asActor(actor).getClientId();
     },
     enabled: !!actor && !isFetching,
   });
