@@ -165,7 +165,7 @@ function ClientIdField() {
         try {
           console.log("[OAuth] Re-reading Client ID from backend to verify...");
           const result = await savedActor.getClientId();
-          const readBack = result.length > 0 ? result[0] : null;
+          const readBack: string | null = result[0] ?? null;
           console.log(
             "[OAuth] Re-read Client ID:",
             readBack ? `${readBack.substring(0, 6)}…` : "null",

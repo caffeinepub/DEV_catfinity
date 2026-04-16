@@ -18,7 +18,7 @@ function asActor(actor: unknown): BackendActor {
 }
 
 export function useProgress() {
-  const { actor, isFetching } = useActor(createActor);
+  const { actor } = useActor(createActor);
 
   return useQuery<LessonProgress[]>({
     queryKey: ["progress"],
@@ -30,7 +30,9 @@ export function useProgress() {
         completedAt: Number(item.completedAt),
       }));
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor,
+    retry: 3,
+    retryDelay: 1000,
   });
 }
 

@@ -8,7 +8,11 @@ import TwitterApi "mixins/twitter-api";
 
 
 actor {
-  // --- Stable state ---
+  // --- Persistent state (enhanced orthogonal persistence) ---
+  // All let/var bindings in this actor are automatically persisted across
+  // upgrades by the --default-persistent-actors compiler flag. Map.empty()
+  // runs only on first canister install; subsequent upgrades restore the
+  // saved state from stable memory without re-initialising.
 
   // Per-principal lesson progress: Principal -> List<CompletedLesson>
   let progressMap : ProgressLib.ProgressMap = Map.empty();
