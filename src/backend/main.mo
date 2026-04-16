@@ -4,9 +4,9 @@ import ProgressLib "lib/progress";
 import TwitterLib "lib/twitter";
 import ProgressApi "mixins/progress-api";
 import TwitterApi "mixins/twitter-api";
-import Migration "migration";
 
-(with migration = Migration.run)
+
+
 actor {
   // --- Stable state ---
 

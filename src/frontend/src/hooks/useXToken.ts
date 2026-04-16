@@ -106,14 +106,22 @@ export function useClientId() {
   });
 }
 
+/**
+ * Saves the Client ID to the backend.
+ * mutationFn returns the written value so callers can do a post-save re-read
+ * comparison without needing an extra hook instance.
+ */
 export function useSetClientId() {
   const { actor } = useActor(createActor);
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (clientId: string) => {
+    mutationFn: async (
+      clientId: string,
+    ): Promise<{ written: string; actor: BackendActor }> => {
       if (!actor) throw new Error("Actor not available");
       await asActor(actor).setClientId(clientId);
+      return { written: clientId, actor: asActor(actor) };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["clientId"] });

@@ -1,4 +1,4 @@
-// Version: 3.0.0
+// Version: 1.0.0
 type CompletedLesson__143293305 = {completedAt : Int; lessonId : Text};
 type Data__917616847<K, V> =
   {var count : Nat__1011761150; kvs : [var ?(K, V)]};
@@ -12,31 +12,13 @@ type List__338271302<T> =
     var elementIndex : Nat__1011761150
   };
 type List__341252331<T> = List__338271302<T>;
-type Map__254296833<K, V> = Map__61810120<K, V>;
-type Map__61810120<K, V> = Map__711417882<K, V>;
-type Map__711417882<K, V> =
-  {var root : Node__362690243<K, V>; var size : Nat__1011761150};
 type Nat__1011761150 = Nat__920180692;
 type Nat__920180692 = Nat;
 type Node__362690243<K, V> =
   {#internal : Internal__150062700<K, V>; #leaf : Leaf__147444601<K, V>};
 type OAuthTokens__571533054 =
   {accessToken : Text; expiresAt : Int; refreshToken : Text};
-actor ({
-  stable progressMap :
-    {
-      var root :
-        Node__362690243<Principal,
-                         List__341252331<CompletedLesson__143293305>>;
-      var size : Nat__1011761150
-    };
-  in settings : Map__254296833<Text, Text>;
-  stable tokenMap :
-    {
-      var root : Node__362690243<Principal, OAuthTokens__571533054>;
-      var size : Nat__1011761150
-    }
-}, {
+actor {
   stable progressMap :
     {
       var root :
@@ -50,4 +32,4 @@ actor ({
       var size : Nat__1011761150
     };
   stable var xClientId : ?Text
-}) ;
+};

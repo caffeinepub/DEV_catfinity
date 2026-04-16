@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { useActor } from "@caffeineai/core-infrastructure";
 import {
   AlertCircle,
   CheckCircle2,
@@ -26,6 +27,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { createActor } from "../backend";
 import { useAuth } from "../hooks/useAuth";
 import {
   useClientId,
@@ -137,28 +139,70 @@ function SettingsSection({
 function ClientIdField() {
   const { data: savedClientId, isLoading: isLoadingId } = useClientId();
   const setClientId = useSetClientId();
+  const { actor } = useActor(createActor);
 
   const [value, setValue] = useState("");
   const [showValue, setShowValue] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [verifySuccess, setVerifySuccess] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const isSet = !!savedClientId;
 
   const handleSave = () => {
-    const trimmed = (value || (savedClientId as string | null) || "").trim();
+    const trimmed = value.trim() || (savedClientId ?? "").trim();
     if (!trimmed) {
       toast.error("Client ID cannot be empty");
       return;
     }
+    setVerifyError(null);
+    setVerifySuccess(false);
+
     setClientId.mutate(trimmed, {
-      onSuccess: () => {
-        toast.success("Client ID saved successfully");
-        setValue("");
+      onSuccess: async ({ actor: savedActor }) => {
+        // Immediately re-read from backend to confirm the value persisted
+        setIsVerifying(true);
+        try {
+          console.log("[OAuth] Re-reading Client ID from backend to verify...");
+          const result = await savedActor.getClientId();
+          const readBack = result.length > 0 ? result[0] : null;
+          console.log(
+            "[OAuth] Re-read Client ID:",
+            readBack ? `${readBack.substring(0, 6)}…` : "null",
+          );
+
+          if (readBack && readBack === trimmed) {
+            setVerifySuccess(true);
+            setValue("");
+            toast.success("Client ID saved and verified");
+          } else {
+            const msg = "Client ID could not be verified — please try again.";
+            setVerifyError(msg);
+            toast.error(msg);
+            console.error(
+              "[OAuth] Client ID verification failed: written vs read-back mismatch",
+              {
+                written: `${trimmed.substring(0, 6)}…`,
+                readBack: readBack ? `${readBack.substring(0, 6)}…` : "null",
+              },
+            );
+          }
+        } catch (err) {
+          const msg = "Client ID could not be verified — please try again.";
+          setVerifyError(msg);
+          toast.error(msg);
+          console.error("[OAuth] Client ID re-read error:", err);
+        } finally {
+          setIsVerifying(false);
+        }
       },
       onError: (err) => {
         toast.error(`Failed to save: ${(err as Error).message}`);
       },
     });
   };
+
+  const isBusy = setClientId.isPending || isVerifying || isLoadingId;
 
   return (
     <div className="space-y-3">
@@ -184,7 +228,11 @@ function ClientIdField() {
                   : "Enter your X Client ID"
             }
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => {
+              setValue(e.target.value);
+              setVerifyError(null);
+              setVerifySuccess(false);
+            }}
             className="pr-10 font-mono text-sm"
             data-ocid="settings.client_id_input"
           />
@@ -204,18 +252,43 @@ function ClientIdField() {
         </div>
         <Button
           onClick={handleSave}
-          disabled={setClientId.isPending || isLoadingId}
+          disabled={isBusy || !actor}
           data-ocid="settings.client_id_save_button"
         >
-          {setClientId.isPending ? "Saving…" : "Save"}
+          {setClientId.isPending
+            ? "Saving…"
+            : isVerifying
+              ? "Verifying…"
+              : "Save"}
         </Button>
       </div>
-      {isSet && !value && (
+
+      {isSet && !value && !verifySuccess && (
         <p className="text-xs text-muted-foreground font-body">
           A Client ID is currently saved. Enter a new value above to replace it.
         </p>
       )}
-      {setClientId.isError && (
+
+      {verifySuccess && (
+        <p
+          className="text-xs text-primary font-body flex items-center gap-1"
+          data-ocid="settings.client_id_success_state"
+        >
+          <CheckCircle2 className="w-3 h-3" />
+          Client ID saved and verified successfully.
+        </p>
+      )}
+
+      {verifyError && (
+        <p
+          className="text-xs text-destructive font-body"
+          data-ocid="settings.client_id_error_state"
+        >
+          {verifyError}
+        </p>
+      )}
+
+      {setClientId.isError && !verifyError && (
         <p
           className="text-xs text-destructive font-body"
           data-ocid="settings.client_id_error_state"
@@ -229,16 +302,26 @@ function ClientIdField() {
 
 // ─── X Connection Section ─────────────────────────────────────────────────────
 function XConnectionSection() {
-  const { data: clientId } = useClientId();
+  const { data: clientId, isLoading: isLoadingClientId } = useClientId();
   const { data: tokenStatus, isLoading: isLoadingStatus } = useTokenStatus();
   const disconnectX = useDisconnectX();
+
+  const [connectError, setConnectError] = useState<string | null>(null);
 
   const hasToken = tokenStatus?.hasToken ?? false;
   const isExpired = tokenStatus?.isExpired ?? false;
 
   const handleConnect = async () => {
+    setConnectError(null);
+
+    // Verify Client ID is present before initiating PKCE flow
     if (!clientId) {
-      toast.error("Please save your X Client ID first");
+      const msg =
+        "No Client ID set — please enter your X OAuth Client ID in the field above before connecting.";
+      setConnectError(msg);
+      console.error(
+        "[OAuth] Blocked redirect: Client ID is not set in backend",
+      );
       return;
     }
 
@@ -264,7 +347,7 @@ function XConnectionSection() {
 
     const params = new URLSearchParams({
       response_type: "code",
-      client_id: clientId as string,
+      client_id: clientId,
       redirect_uri: redirectUri,
       scope: "tweet.read tweet.write users.read offline.access",
       state,
@@ -304,7 +387,7 @@ function XConnectionSection() {
       <div className="flex flex-wrap gap-3">
         <Button
           onClick={handleConnect}
-          disabled={!clientId}
+          disabled={!clientId || isLoadingClientId}
           className="gap-2"
           data-ocid="settings.connect_x_button"
         >
@@ -360,7 +443,17 @@ function XConnectionSection() {
         )}
       </div>
 
-      {!clientId && (
+      {connectError && (
+        <p
+          className="text-xs text-destructive font-body flex items-start gap-1.5"
+          data-ocid="settings.connect_x_error_state"
+        >
+          <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+          {connectError}
+        </p>
+      )}
+
+      {!clientId && !connectError && (
         <p
           className="text-xs text-muted-foreground font-body"
           data-ocid="settings.connect_x_warning"
