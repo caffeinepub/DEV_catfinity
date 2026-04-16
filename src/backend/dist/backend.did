@@ -14,6 +14,22 @@ type TokenExchangeResult =
    err: text;
    ok: text;
  };
+type HttpTransformArgs = 
+ record {
+   context: blob;
+   response: HttpResponse;
+ };
+type HttpResponse = 
+ record {
+   body: blob;
+   headers: vec HttpHeader;
+   status: nat;
+ };
+type HttpHeader = 
+ record {
+   name: text;
+   value: text;
+ };
 type CompletedLesson = 
  record {
    completedAt: int;
@@ -33,4 +49,5 @@ service : {
   /// Set the global X (Twitter) OAuth 2.0 Client ID.
   setClientId: (id: text) -> ();
   storeTokens: (accessToken: text, refreshToken: text, expiresAt: int) -> ();
+  transformTokenResponse: (args: HttpTransformArgs) -> (HttpResponse) query;
 }

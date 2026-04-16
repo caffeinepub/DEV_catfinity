@@ -26,4 +26,9 @@ export const mockBackend: backendInterface = {
   resetProgress: async () => undefined,
   setClientId: async (_id) => undefined,
   storeTokens: async (_accessToken, _refreshToken, _expiresAt) => undefined,
+  transformTokenResponse: async (_args) => ({
+    status: 200n,
+    headers: [],
+    body: new Uint8Array(),
+  }),
 };

@@ -18,7 +18,35 @@ type Node__362690243<K, V> =
   {#internal : Internal__150062700<K, V>; #leaf : Leaf__147444601<K, V>};
 type OAuthTokens__571533054 =
   {accessToken : Text; expiresAt : Int; refreshToken : Text};
+type http_header__42844073 = {name : Text; value : Text};
+type http_request_args__695908908 =
+  {
+    body : ?Blob;
+    headers : [http_header__42844073];
+    is_replicated : ?Bool;
+    max_response_bytes : ?Nat64;
+    method : {#get; #head; #post};
+    transform :
+      ?{
+         context : Blob;
+         function :
+           shared query {
+                          context : Blob;
+                          response : http_request_result__101127348
+                        } ->
+             async http_request_result__101127348
+       };
+    url : Text
+  };
+type http_request_result__101127348 =
+  {body : Blob; headers : [http_header__42844073]; status : Nat};
 actor {
+  stable ic :
+    actor {
+      http_request :
+        shared http_request_args__695908908 ->
+          async http_request_result__101127348
+    };
   stable progressMap :
     {
       var root :

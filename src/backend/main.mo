@@ -23,9 +23,19 @@ actor {
   // Global X (Twitter) OAuth 2.0 Client ID — single value shared across all users.
   var xClientId : ?Text = null;
 
+  // --- HTTP outcall transform for OAuth token endpoint ---
+  // Strips all non-deterministic headers so ICP replicas reach consensus.
+  type HttpHeader = { name : Text; value : Text };
+  type HttpResponse = { status : Nat; headers : [HttpHeader]; body : Blob };
+  type HttpTransformArgs = { response : HttpResponse; context : Blob };
+
+  public shared query func transformTokenResponse(args : HttpTransformArgs) : async HttpResponse {
+    { args.response with headers = [] };
+  };
+
   // --- Mixin includes ---
   include ProgressApi(progressMap);
-  include TwitterApi(tokenMap, func() = xClientId);
+  include TwitterApi(tokenMap, func() = xClientId, transformTokenResponse);
 
   // --- Settings API (direct, needs write access to xClientId) ---
 

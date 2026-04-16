@@ -22,6 +22,16 @@ export const TokenStatus = IDL.Record({
   'hasToken' : IDL.Bool,
 });
 export const TweetResult = IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text });
+export const HttpHeader = IDL.Record({ 'value' : IDL.Text, 'name' : IDL.Text });
+export const HttpResponse = IDL.Record({
+  'status' : IDL.Nat,
+  'body' : IDL.Vec(IDL.Nat8),
+  'headers' : IDL.Vec(HttpHeader),
+});
+export const HttpTransformArgs = IDL.Record({
+  'context' : IDL.Vec(IDL.Nat8),
+  'response' : HttpResponse,
+});
 
 export const idlService = IDL.Service({
   'disconnectX' : IDL.Func([], [], []),
@@ -38,6 +48,11 @@ export const idlService = IDL.Service({
   'resetProgress' : IDL.Func([], [], []),
   'setClientId' : IDL.Func([IDL.Text], [], []),
   'storeTokens' : IDL.Func([IDL.Text, IDL.Text, IDL.Int], [], []),
+  'transformTokenResponse' : IDL.Func(
+      [HttpTransformArgs],
+      [HttpResponse],
+      ['query'],
+    ),
 });
 
 export const idlInitArgs = [];
@@ -57,6 +72,16 @@ export const idlFactory = ({ IDL }) => {
     'hasToken' : IDL.Bool,
   });
   const TweetResult = IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text });
+  const HttpHeader = IDL.Record({ 'value' : IDL.Text, 'name' : IDL.Text });
+  const HttpResponse = IDL.Record({
+    'status' : IDL.Nat,
+    'body' : IDL.Vec(IDL.Nat8),
+    'headers' : IDL.Vec(HttpHeader),
+  });
+  const HttpTransformArgs = IDL.Record({
+    'context' : IDL.Vec(IDL.Nat8),
+    'response' : HttpResponse,
+  });
   
   return IDL.Service({
     'disconnectX' : IDL.Func([], [], []),
@@ -73,6 +98,11 @@ export const idlFactory = ({ IDL }) => {
     'resetProgress' : IDL.Func([], [], []),
     'setClientId' : IDL.Func([IDL.Text], [], []),
     'storeTokens' : IDL.Func([IDL.Text, IDL.Text, IDL.Int], [], []),
+    'transformTokenResponse' : IDL.Func(
+        [HttpTransformArgs],
+        [HttpResponse],
+        ['query'],
+      ),
   });
 };
 

@@ -7,13 +7,10 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
-export type TokenExchangeResult = {
-    __kind__: "ok";
-    ok: string;
-} | {
-    __kind__: "err";
-    err: string;
-};
+export interface HttpTransformArgs {
+    context: Uint8Array;
+    response: HttpResponse;
+}
 export type TweetResult = {
     __kind__: "ok";
     ok: string;
@@ -26,9 +23,25 @@ export interface TokenStatus {
     hasRefreshToken: boolean;
     hasToken: boolean;
 }
+export interface HttpResponse {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<HttpHeader>;
+}
+export type TokenExchangeResult = {
+    __kind__: "ok";
+    ok: string;
+} | {
+    __kind__: "err";
+    err: string;
+};
 export interface CompletedLesson {
     lessonId: string;
     completedAt: bigint;
+}
+export interface HttpHeader {
+    value: string;
+    name: string;
 }
 export interface backendInterface {
     disconnectX(): Promise<void>;
@@ -47,4 +60,5 @@ export interface backendInterface {
      */
     setClientId(id: string): Promise<void>;
     storeTokens(accessToken: string, refreshToken: string, expiresAt: bigint): Promise<void>;
+    transformTokenResponse(args: HttpTransformArgs): Promise<HttpResponse>;
 }

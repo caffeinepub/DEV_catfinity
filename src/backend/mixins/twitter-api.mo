@@ -3,15 +3,39 @@ import Time "mo:core/Time";
 import Debug "mo:core/Debug";
 import Text "mo:core/Text";
 import Int "mo:core/Int";
+import Blob "mo:core/Blob";
 import TwitterLib "../lib/twitter";
 import Types "../types/twitter";
 import TweetsApi "mo:x-client/Apis/TweetsApi";
 import Config "mo:x-client/Config";
 import TweetCreateRequest "mo:x-client/Models/TweetCreateRequest";
 
-mixin (tokenMap : TwitterLib.TokenMap, getClientId : () -> ?Text) {
+mixin (
+  tokenMap : TwitterLib.TokenMap,
+  getClientId : () -> ?Text,
+  transformTokenResponse : shared query ({ response : { status : Nat; headers : [{ name : Text; value : Text }]; body : Blob }; context : Blob }) -> async { status : Nat; headers : [{ name : Text; value : Text }]; body : Blob },
+) {
 
   // ── Internal helpers ──────────────────────────────────────────────────────
+
+  type http_header = { name : Text; value : Text };
+  type http_request_result = { status : Nat; headers : [http_header]; body : Blob };
+  type http_request_args = {
+    url : Text;
+    max_response_bytes : ?Nat64;
+    method : { #get; #head; #post };
+    headers : [http_header];
+    body : ?Blob;
+    transform : ?{
+      function : shared query ({ response : http_request_result; context : Blob }) -> async http_request_result;
+      context : Blob;
+    };
+    is_replicated : ?Bool;
+  };
+
+  let ic = actor "aaaaa-aa" : actor {
+    http_request : (http_request_args) -> async http_request_result;
+  };
 
   /// Exchange a refresh token for new access + refresh tokens.
   /// Attaches 200_000_000 cycles for the token endpoint outcall.
@@ -29,25 +53,6 @@ mixin (tokenMap : TwitterLib.TokenMap, getClientId : () -> ?Text) {
 
     Debug.print("[Tweet Debug] refreshAccessToken: POST https://api.x.com/2/oauth2/token body=" # body);
 
-    type http_header = { name : Text; value : Text };
-    type http_request_result = { status : Nat; headers : [http_header]; body : Blob };
-    type http_request_args = {
-      url : Text;
-      max_response_bytes : ?Nat64;
-      method : { #get; #head; #post };
-      headers : [http_header];
-      body : ?Blob;
-      transform : ?{
-        function : shared query ({ response : http_request_result; context : Blob }) -> async http_request_result;
-        context : Blob;
-      };
-      is_replicated : ?Bool;
-    };
-
-    let ic = actor "aaaaa-aa" : actor {
-      http_request : (http_request_args) -> async http_request_result;
-    };
-
     let request : http_request_args = {
       url = "https://api.x.com/2/oauth2/token";
       max_response_bytes = ?10_000;
@@ -56,8 +61,8 @@ mixin (tokenMap : TwitterLib.TokenMap, getClientId : () -> ?Text) {
         { name = "Content-Type"; value = "application/x-www-form-urlencoded" },
       ];
       body = ?(body.encodeUtf8());
-      transform = null;
-      is_replicated = null;
+      transform = ?{ function = transformTokenResponse; context = Blob.fromArray([]) };
+      is_replicated = ?false;
     };
 
     try {
@@ -194,25 +199,6 @@ mixin (tokenMap : TwitterLib.TokenMap, getClientId : () -> ?Text) {
       "&code_verifier=" # urlEncode(codeVerifier) #
       "&client_id=" # urlEncode(clientId);
 
-    type http_header = { name : Text; value : Text };
-    type http_request_result = { status : Nat; headers : [http_header]; body : Blob };
-    type http_request_args = {
-      url : Text;
-      max_response_bytes : ?Nat64;
-      method : { #get; #head; #post };
-      headers : [http_header];
-      body : ?Blob;
-      transform : ?{
-        function : shared query ({ response : http_request_result; context : Blob }) -> async http_request_result;
-        context : Blob;
-      };
-      is_replicated : ?Bool;
-    };
-
-    let ic = actor "aaaaa-aa" : actor {
-      http_request : (http_request_args) -> async http_request_result;
-    };
-
     let request : http_request_args = {
       url = "https://api.x.com/2/oauth2/token";
       max_response_bytes = ?10_000;
@@ -221,8 +207,8 @@ mixin (tokenMap : TwitterLib.TokenMap, getClientId : () -> ?Text) {
         { name = "Content-Type"; value = "application/x-www-form-urlencoded" },
       ];
       body = ?(body.encodeUtf8());
-      transform = null;
-      is_replicated = null;
+      transform = ?{ function = transformTokenResponse; context = Blob.fromArray([]) };
+      is_replicated = ?false;
     };
 
     try {

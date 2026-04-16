@@ -89,13 +89,10 @@ export class ExternalBlob {
         return this;
     }
 }
-export type TokenExchangeResult = {
-    __kind__: "ok";
-    ok: string;
-} | {
-    __kind__: "err";
-    err: string;
-};
+export interface HttpTransformArgs {
+    context: Uint8Array;
+    response: HttpResponse;
+}
 export type TweetResult = {
     __kind__: "ok";
     ok: string;
@@ -108,9 +105,25 @@ export interface TokenStatus {
     hasRefreshToken: boolean;
     hasToken: boolean;
 }
+export interface HttpResponse {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<HttpHeader>;
+}
+export type TokenExchangeResult = {
+    __kind__: "ok";
+    ok: string;
+} | {
+    __kind__: "err";
+    err: string;
+};
 export interface CompletedLesson {
     lessonId: string;
     completedAt: bigint;
+}
+export interface HttpHeader {
+    value: string;
+    name: string;
 }
 export interface backendInterface {
     disconnectX(): Promise<void>;
@@ -129,6 +142,7 @@ export interface backendInterface {
      */
     setClientId(id: string): Promise<void>;
     storeTokens(accessToken: string, refreshToken: string, expiresAt: bigint): Promise<void>;
+    transformTokenResponse(args: HttpTransformArgs): Promise<HttpResponse>;
 }
 import type { TokenExchangeResult as _TokenExchangeResult, TweetResult as _TweetResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -270,6 +284,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.storeTokens(arg0, arg1, arg2);
+            return result;
+        }
+    }
+    async transformTokenResponse(arg0: HttpTransformArgs): Promise<HttpResponse> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.transformTokenResponse(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.transformTokenResponse(arg0);
             return result;
         }
     }

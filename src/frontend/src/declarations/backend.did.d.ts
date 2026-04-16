@@ -11,6 +11,16 @@ import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
 export interface CompletedLesson { 'lessonId' : string, 'completedAt' : bigint }
+export interface HttpHeader { 'value' : string, 'name' : string }
+export interface HttpResponse {
+  'status' : bigint,
+  'body' : Uint8Array,
+  'headers' : Array<HttpHeader>,
+}
+export interface HttpTransformArgs {
+  'context' : Uint8Array,
+  'response' : HttpResponse,
+}
 export type TokenExchangeResult = { 'ok' : string } |
   { 'err' : string };
 export interface TokenStatus {
@@ -37,6 +47,7 @@ export interface _SERVICE {
    */
   'setClientId' : ActorMethod<[string], undefined>,
   'storeTokens' : ActorMethod<[string, string, bigint], undefined>,
+  'transformTokenResponse' : ActorMethod<[HttpTransformArgs], HttpResponse>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];
