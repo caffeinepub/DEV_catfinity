@@ -31,4 +31,4 @@ args = [
 
 [dependencies]
 core = "2.3.1"
-x-client = "0.1.0"
+x-client = "0.1.1"

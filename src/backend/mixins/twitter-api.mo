@@ -6,9 +6,6 @@ import Int "mo:core/Int";
 import Blob "mo:core/Blob";
 import TwitterLib "../lib/twitter";
 import Types "../types/twitter";
-import TweetsApi "mo:x-client/Apis/TweetsApi";
-import Config "mo:x-client/Config";
-import TweetCreateRequest "mo:x-client/Models/TweetCreateRequest";
 
 mixin (
   tokenMap : TwitterLib.TokenMap,
@@ -35,6 +32,17 @@ mixin (
 
   let ic = actor "aaaaa-aa" : actor {
     http_request : (http_request_args) -> async http_request_result;
+  };
+
+  /// Escape a text value for safe embedding in a JSON string literal.
+  func jsonEscapeText(s : Text) : Text {
+    var result = s;
+    result := result.replace(#text "\\", "\\\\");
+    result := result.replace(#text "\"", "\\\"");
+    result := result.replace(#text "\n", "\\n");
+    result := result.replace(#text "\r", "\\r");
+    result := result.replace(#text "\t", "\\t");
+    result;
   };
 
   /// Exchange a refresh token for new access + refresh tokens.
@@ -311,83 +319,99 @@ mixin (
     Debug.print("[Tweet Debug] postTweet: tweetText=" # tweetText);
     Debug.print("[Tweet Debug] postTweet: calling tweet API for principal " # caller.toText());
 
-    // Build x-client config with bearer token and 25B cycles
-    let tweetConfig : Config.Config = {
-      Config.defaultConfig with
-      auth = ?#bearer(tokens.accessToken);
-      cycles = 25_000_000_000;
+    // Build minimal JSON body — only {"text": "..."} with proper escaping
+    // This bypasses x-client TweetCreateRequest serialization which adds all null optional
+    // fields as Motoko-formatted numeric keys (e.g. 5_144_721), causing X API rejection.
+    let escapedText = jsonEscapeText(tweetText);
+    let tweetBodyText = "{\"text\": \"" # escapedText # "\"}";
+    let tweetBodyBlob = tweetBodyText.encodeUtf8();
+
+    Debug.print("[Tweet Debug] postTweet: request body=" # tweetBodyText);
+
+    // tweetConfig shape preserved for reference; is_replicated = ?false applied directly below
+    let tweetRequest : http_request_args = {
+      url = "https://api.x.com/2/tweets";
       max_response_bytes = ?500_000;
+      method = #post;
+      headers = [
+        { name = "Content-Type"; value = "application/json" },
+        { name = "Authorization"; value = "Bearer " # tokens.accessToken },
+      ];
+      body = ?tweetBodyBlob;
+      transform = null;
       is_replicated = ?false;
     };
 
-    let tweetRequest : TweetCreateRequest.TweetCreateRequest = {
-      text_ = ?tweetText;
-      card_uri = null;
-      community_id = null;
-      direct_message_deep_link = null;
-      edit_options = null;
-      for_super_followers_only = null;
-      geo = null;
-      made_with_ai = null;
-      media = null;
-      nullcast = null;
-      paid_partnership = null;
-      poll = null;
-      quote_tweet_id = null;
-      reply = null;
-      reply_settings = null;
-      share_with_followers = null;
-    };
-
     try {
-      Debug.print("[Tweet Debug] postTweet: calling TweetsApi.createPosts with 25B cycles");
-      let response = await* TweetsApi.createPosts(tweetConfig, tweetRequest);
-      let tweetId = switch (response.data) {
-        case (?data) data.id;
-        case null "unknown";
+      Debug.print("[Tweet Debug] postTweet: calling POST /2/tweets with 25B cycles");
+      let response = await (with cycles = 25_000_000_000) ic.http_request(tweetRequest);
+      let responseText = switch (response.body.decodeUtf8()) {
+        case (?t) t;
+        case null "";
       };
-      Debug.print("[Tweet Debug] postTweet: success! tweetId=" # tweetId);
-      #ok("Tweet posted successfully! Tweet ID: " # tweetId);
+      Debug.print("[Tweet Debug] postTweet: status=" # response.status.toText() # " body=" # responseText);
+
+      if (response.status >= 200 and response.status < 300) {
+        let tweetId = switch (extractJsonField(responseText, "id")) {
+          case (?id) id;
+          case null "unknown";
+        };
+        Debug.print("[Tweet Debug] postTweet: success! tweetId=" # tweetId);
+        #ok("Tweet posted successfully! Tweet ID: " # tweetId);
+      } else {
+        let msg = "HTTP " # response.status.toText() # ": " # responseText;
+        Debug.print("[Tweet Debug] postTweet: error " # msg);
+
+        // Check for 401/403 — attempt one token refresh and retry
+        if (response.status == 401 or response.status == 403) {
+          Debug.print("[Tweet Debug] postTweet: got 401/403, attempting token refresh");
+          if (tokens.refreshToken != "") {
+            let refreshed = await* refreshAccessToken(caller, tokens.refreshToken);
+            if (refreshed) {
+              let freshTokens = switch (TwitterLib.getTokens(tokenMap, caller)) {
+                case (?t) t;
+                case null { return #err("Token refresh succeeded but tokens missing.") };
+              };
+              let retryRequest : http_request_args = {
+                tweetRequest with
+                headers = [
+                  { name = "Content-Type"; value = "application/json" },
+                  { name = "Authorization"; value = "Bearer " # freshTokens.accessToken },
+                ];
+              };
+              try {
+                Debug.print("[Tweet Debug] postTweet: retrying after refresh");
+                let retryResponse = await (with cycles = 25_000_000_000) ic.http_request(retryRequest);
+                let retryText = switch (retryResponse.body.decodeUtf8()) {
+                  case (?t) t;
+                  case null "";
+                };
+                Debug.print("[Tweet Debug] postTweet: retry status=" # retryResponse.status.toText() # " body=" # retryText);
+                if (retryResponse.status >= 200 and retryResponse.status < 300) {
+                  let retryId = switch (extractJsonField(retryText, "id")) {
+                    case (?id) id;
+                    case null "unknown";
+                  };
+                  Debug.print("[Tweet Debug] postTweet: retry success! tweetId=" # retryId);
+                  return #ok("Tweet posted successfully! Tweet ID: " # retryId);
+                } else {
+                  return #err("Tweet failed after token refresh: HTTP " # retryResponse.status.toText() # ": " # retryText);
+                };
+              } catch (e2) {
+                let msg2 = e2.message();
+                Debug.print("[Tweet Debug] postTweet: retry error " # msg2);
+                return #err("Tweet failed after token refresh: " # msg2);
+              };
+            };
+          };
+          return #err("Tweet failed (auth error). Please reconnect your X account. Error: " # msg);
+        };
+
+        #err("Tweet failed: " # msg);
+      };
     } catch (e) {
       let msg = e.message();
       Debug.print("[Tweet Debug] postTweet: error " # msg);
-
-      // Check for 401/403 — attempt one token refresh and retry
-      if (msg.contains(#text "HTTP 401") or msg.contains(#text "HTTP 403")) {
-        Debug.print("[Tweet Debug] postTweet: got 401/403, attempting token refresh");
-        if (tokens.refreshToken != "") {
-          let refreshed = await* refreshAccessToken(caller, tokens.refreshToken);
-          if (refreshed) {
-            let freshTokens = switch (TwitterLib.getTokens(tokenMap, caller)) {
-              case (?t) t;
-              case null { return #err("Token refresh succeeded but tokens missing.") };
-            };
-            let retryConfig : Config.Config = {
-              Config.defaultConfig with
-              auth = ?#bearer(freshTokens.accessToken);
-              cycles = 25_000_000_000;
-              max_response_bytes = ?500_000;
-              is_replicated = ?false;
-            };
-            try {
-              Debug.print("[Tweet Debug] postTweet: retrying after refresh");
-              let retryResponse = await* TweetsApi.createPosts(retryConfig, tweetRequest);
-              let retryId = switch (retryResponse.data) {
-                case (?data) data.id;
-                case null "unknown";
-              };
-              Debug.print("[Tweet Debug] postTweet: retry success! tweetId=" # retryId);
-              return #ok("Tweet posted successfully! Tweet ID: " # retryId);
-            } catch (e2) {
-              let msg2 = e2.message();
-              Debug.print("[Tweet Debug] postTweet: retry error " # msg2);
-              return #err("Tweet failed after token refresh: " # msg2);
-            };
-          };
-        };
-        return #err("Tweet failed (auth error). Please reconnect your X account. Error: " # msg);
-      };
-
       #err("Tweet failed: " # msg);
     };
   };
