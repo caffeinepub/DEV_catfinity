@@ -317,6 +317,7 @@ mixin (
       auth = ?#bearer(tokens.accessToken);
       cycles = 25_000_000_000;
       max_response_bytes = ?500_000;
+      is_replicated = ?false;
     };
 
     let tweetRequest : TweetCreateRequest.TweetCreateRequest = {
@@ -366,6 +367,7 @@ mixin (
               auth = ?#bearer(freshTokens.accessToken);
               cycles = 25_000_000_000;
               max_response_bytes = ?500_000;
+              is_replicated = ?false;
             };
             try {
               Debug.print("[Tweet Debug] postTweet: retrying after refresh");
