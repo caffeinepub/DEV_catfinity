@@ -1,0 +1,36 @@
+type TweetResult = 
+ variant {
+   err: text;
+   ok: text;
+ };
+type TokenStatus = 
+ record {
+   hasRefreshToken: bool;
+   hasToken: bool;
+   isExpired: bool;
+ };
+type TokenExchangeResult = 
+ variant {
+   err: text;
+   ok: text;
+ };
+type CompletedLesson = 
+ record {
+   completedAt: int;
+   lessonId: text;
+ };
+service : {
+  disconnectX: () -> ();
+  exchangeToken: (code: text, codeVerifier: text, redirectUri: text) ->
+   (TokenExchangeResult);
+  /// Get the global X (Twitter) OAuth 2.0 Client ID.
+  getClientId: () -> (opt text) query;
+  getProgress: () -> (vec CompletedLesson) query;
+  getTokenStatus: () -> (TokenStatus) query;
+  markComplete: (lessonId: text) -> ();
+  postTweet: (lessonId: text, lessonTitle: text) -> (TweetResult);
+  resetProgress: () -> ();
+  /// Set the global X (Twitter) OAuth 2.0 Client ID.
+  setClientId: (id: text) -> ();
+  storeTokens: (accessToken: text, refreshToken: text, expiresAt: int) -> ();
+}
