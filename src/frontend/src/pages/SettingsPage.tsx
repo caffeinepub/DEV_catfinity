@@ -21,6 +21,7 @@ import {
   Clock,
   Eye,
   EyeOff,
+  KeyRound,
   Twitter,
   User,
   X,
@@ -29,6 +30,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { createActor } from "../backend";
 import { useAuth } from "../hooks/useAuth";
+import { useOpenAIKey, useSetOpenAIKey } from "../hooks/useOpenAI";
 import {
   useClientId,
   useDisconnectX,
@@ -474,6 +476,161 @@ function XConnectionSection() {
   );
 }
 
+// ─── OpenAI API Key Field ─────────────────────────────────────────────────────
+function OpenAIKeyField() {
+  const { data: savedKey, isLoading: isLoadingKey } = useOpenAIKey();
+  const setOpenAIKey = useSetOpenAIKey();
+  const { actor } = useActor(createActor);
+
+  const [value, setValue] = useState("");
+  const [showValue, setShowValue] = useState(false);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [verifySuccess, setVerifySuccess] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const isSet = !!savedKey;
+
+  // Display mask: show "sk-…" for keys starting with "sk-", otherwise "•••…"
+  const savedMask =
+    isSet && savedKey ? (savedKey.startsWith("sk-") ? "sk-…" : "•••…") : null;
+
+  const handleSave = () => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      toast.error("API key cannot be empty");
+      return;
+    }
+    setVerifyError(null);
+    setVerifySuccess(false);
+
+    setOpenAIKey.mutate(trimmed, {
+      onSuccess: async ({ actor: savedActor }) => {
+        setIsVerifying(true);
+        try {
+          const readBack: string | null = await savedActor.getOpenAIKey();
+
+          if (readBack && readBack === trimmed) {
+            setVerifySuccess(true);
+            setValue("");
+            toast.success("OpenAI API key saved and verified");
+          } else {
+            const msg = "API key could not be verified — please try again.";
+            setVerifyError(msg);
+            toast.error(msg);
+          }
+        } catch (err) {
+          const msg = "API key could not be verified — please try again.";
+          setVerifyError(msg);
+          toast.error(msg);
+          console.error("[OpenAI] API key re-read error:", err);
+        } finally {
+          setIsVerifying(false);
+        }
+      },
+      onError: (err) => {
+        toast.error(`Failed to save: ${(err as Error).message}`);
+      },
+    });
+  };
+
+  const isBusy = setOpenAIKey.isPending || isVerifying || isLoadingKey;
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label htmlFor="openai-key" className="text-sm font-body font-medium">
+          OpenAI API Key
+        </Label>
+        <p className="text-xs text-muted-foreground mt-0.5 font-body">
+          Your personal OpenAI API key (starts with{" "}
+          <code className="font-mono">sk-</code>). Stored per-account and never
+          shared with other users.
+        </p>
+      </div>
+
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Input
+            id="openai-key"
+            type={showValue ? "text" : "password"}
+            placeholder={
+              isLoadingKey ? "Loading…" : isSet ? "••••••••••••••••" : "sk-…"
+            }
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value);
+              setVerifyError(null);
+              setVerifySuccess(false);
+            }}
+            className="pr-10 font-mono text-sm"
+            data-ocid="settings.openai_key_input"
+          />
+          <button
+            type="button"
+            onClick={() => setShowValue((v) => !v)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={showValue ? "Hide API key" : "Show API key"}
+            data-ocid="settings.openai_key_toggle"
+          >
+            {showValue ? (
+              <EyeOff className="w-4 h-4" />
+            ) : (
+              <Eye className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+        <Button
+          onClick={handleSave}
+          disabled={isBusy || !actor}
+          data-ocid="settings.openai_key_save_button"
+        >
+          {setOpenAIKey.isPending
+            ? "Saving…"
+            : isVerifying
+              ? "Verifying…"
+              : "Save"}
+        </Button>
+      </div>
+
+      {isSet && !value && !verifySuccess && savedMask && (
+        <p className="text-xs text-muted-foreground font-body flex items-center gap-1.5">
+          <KeyRound className="w-3 h-3 flex-shrink-0" />
+          Currently saved: <code className="font-mono">{savedMask}</code>. Enter
+          a new value above to replace it.
+        </p>
+      )}
+
+      {verifySuccess && (
+        <p
+          className="text-xs text-primary font-body flex items-center gap-1"
+          data-ocid="settings.openai_key_success_state"
+        >
+          <CheckCircle2 className="w-3 h-3" />
+          OpenAI API key saved and verified successfully.
+        </p>
+      )}
+
+      {verifyError && (
+        <p
+          className="text-xs text-destructive font-body"
+          data-ocid="settings.openai_key_error_state"
+        >
+          {verifyError}
+        </p>
+      )}
+
+      {setOpenAIKey.isError && !verifyError && (
+        <p
+          className="text-xs text-destructive font-body"
+          data-ocid="settings.openai_key_error_state"
+        >
+          {(setOpenAIKey.error as Error).message}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // ─── Account Section ──────────────────────────────────────────────────────────
 function AccountSection() {
   const { principalText, logout } = useAuth();
@@ -546,6 +703,15 @@ export function SettingsPage() {
           </p>
           <XConnectionSection />
         </div>
+      </SettingsSection>
+
+      <Separator />
+
+      <SettingsSection
+        title="OpenAI Integration"
+        description="Your personal OpenAI API key for the Q&A assistant on lessons and the landing page. Stored privately per account — never shared with other users."
+      >
+        <OpenAIKeyField />
       </SettingsSection>
     </div>
   );

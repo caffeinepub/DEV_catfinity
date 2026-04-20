@@ -13,6 +13,7 @@ import {
 import { toast } from "sonner";
 import { MathBlock } from "../components/MathBlock";
 import { MathInline } from "../components/MathInline";
+import { QAPanel } from "../components/QAPanel";
 import { LESSONS, getLessonById, getLessonIndex } from "../data/lessons";
 import {
   useMarkComplete,
@@ -306,6 +307,11 @@ export function LessonDetailPage() {
               Completed
             </Badge>
           )}
+        </div>
+
+        {/* Q&A Panel */}
+        <div className="mt-8">
+          <QAPanel lessonId={lessonId} lessonName={lesson.title} />
         </div>
 
         {/* Prev / Next navigation */}

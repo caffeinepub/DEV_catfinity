@@ -2,8 +2,10 @@
 import Map "mo:core/Map";
 import ProgressLib "lib/progress";
 import TwitterLib "lib/twitter";
+import QATypes "types/qa";
 import ProgressApi "mixins/progress-api";
 import TwitterApi "mixins/twitter-api";
+import QAApi "mixins/qa-api";
 
 
 
@@ -23,6 +25,15 @@ actor {
   // Global X (Twitter) OAuth 2.0 Client ID — single value shared across all users.
   var xClientId : ?Text = null;
 
+  // Per-principal per-lesson Q&A history: Principal -> lessonId -> [QA]
+  let qaHistoryPerLesson : QATypes.QALessonMap = Map.empty();
+
+  // Per-principal global (landing-page) Q&A history: Principal -> [QA]
+  let qaHistoryGlobal : QATypes.QAGlobalMap = Map.empty();
+
+  // Per-principal OpenAI API key store
+  let openaiKeyMap : QATypes.OpenAIKeyMap = Map.empty();
+
   // --- HTTP outcall transform for OAuth token endpoint ---
   // Strips all non-deterministic headers so ICP replicas reach consensus.
   type HttpHeader = { name : Text; value : Text };
@@ -36,6 +47,7 @@ actor {
   // --- Mixin includes ---
   include ProgressApi(progressMap);
   include TwitterApi(tokenMap, func() = xClientId, transformTokenResponse);
+  include QAApi(qaHistoryPerLesson, qaHistoryGlobal, openaiKeyMap);
 
   // --- Settings API (direct, needs write access to xClientId) ---
 

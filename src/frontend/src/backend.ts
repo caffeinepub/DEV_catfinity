@@ -93,6 +93,7 @@ export interface HttpTransformArgs {
     context: Uint8Array;
     response: HttpResponse;
 }
+export type Time = bigint;
 export type TweetResult = {
     __kind__: "ok";
     ok: string;
@@ -110,6 +111,11 @@ export interface HttpResponse {
     body: Uint8Array;
     headers: Array<HttpHeader>;
 }
+export interface QA {
+    at: Time;
+    question: string;
+    response: string;
+}
 export type TokenExchangeResult = {
     __kind__: "ok";
     ok: string;
@@ -117,22 +123,31 @@ export type TokenExchangeResult = {
     __kind__: "err";
     err: string;
 };
-export interface CompletedLesson {
-    lessonId: string;
-    completedAt: bigint;
-}
 export interface HttpHeader {
     value: string;
     name: string;
 }
+export interface CompletedLesson {
+    lessonId: string;
+    completedAt: bigint;
+}
 export interface backendInterface {
+    askQuestion(lessonId: string | null, lessonName: string | null, question: string): Promise<{
+        __kind__: "ok";
+        ok: string;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
     disconnectX(): Promise<void>;
     exchangeToken(code: string, codeVerifier: string, redirectUri: string): Promise<TokenExchangeResult>;
     /**
      * / Get the global X (Twitter) OAuth 2.0 Client ID.
      */
     getClientId(): Promise<string | null>;
+    getOpenAIKey(): Promise<string | null>;
     getProgress(): Promise<Array<CompletedLesson>>;
+    getQAHistory(lessonId: string | null): Promise<Array<QA>>;
     getTokenStatus(): Promise<TokenStatus>;
     markComplete(lessonId: string): Promise<void>;
     postTweet(lessonId: string, lessonTitle: string): Promise<TweetResult>;
@@ -141,12 +156,33 @@ export interface backendInterface {
      * / Set the global X (Twitter) OAuth 2.0 Client ID.
      */
     setClientId(id: string): Promise<void>;
+    setOpenAIKey(key: string): Promise<void>;
     storeTokens(accessToken: string, refreshToken: string, expiresAt: bigint): Promise<void>;
     transformTokenResponse(args: HttpTransformArgs): Promise<HttpResponse>;
 }
 import type { TokenExchangeResult as _TokenExchangeResult, TweetResult as _TweetResult } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
+    async askQuestion(arg0: string | null, arg1: string | null, arg2: string): Promise<{
+        __kind__: "ok";
+        ok: string;
+    } | {
+        __kind__: "err";
+        err: string;
+    }> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.askQuestion(to_candid_opt_n1(this._uploadFile, this._downloadFile, arg0), to_candid_opt_n1(this._uploadFile, this._downloadFile, arg1), arg2);
+                return from_candid_variant_n2(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.askQuestion(to_candid_opt_n1(this._uploadFile, this._downloadFile, arg0), to_candid_opt_n1(this._uploadFile, this._downloadFile, arg1), arg2);
+            return from_candid_variant_n2(this._uploadFile, this._downloadFile, result);
+        }
+    }
     async disconnectX(): Promise<void> {
         if (this.processError) {
             try {
@@ -165,28 +201,42 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.exchangeToken(arg0, arg1, arg2);
-                return from_candid_TokenExchangeResult_n1(this._uploadFile, this._downloadFile, result);
+                return from_candid_TokenExchangeResult_n3(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.exchangeToken(arg0, arg1, arg2);
-            return from_candid_TokenExchangeResult_n1(this._uploadFile, this._downloadFile, result);
+            return from_candid_TokenExchangeResult_n3(this._uploadFile, this._downloadFile, result);
         }
     }
     async getClientId(): Promise<string | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getClientId();
-                return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n4(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getClientId();
-            return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n4(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getOpenAIKey(): Promise<string | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getOpenAIKey();
+                return from_candid_opt_n4(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getOpenAIKey();
+            return from_candid_opt_n4(this._uploadFile, this._downloadFile, result);
         }
     }
     async getProgress(): Promise<Array<CompletedLesson>> {
@@ -200,6 +250,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.getProgress();
+            return result;
+        }
+    }
+    async getQAHistory(arg0: string | null): Promise<Array<QA>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getQAHistory(to_candid_opt_n1(this._uploadFile, this._downloadFile, arg0));
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getQAHistory(to_candid_opt_n1(this._uploadFile, this._downloadFile, arg0));
             return result;
         }
     }
@@ -235,14 +299,14 @@ export class Backend implements backendInterface {
         if (this.processError) {
             try {
                 const result = await this.actor.postTweet(arg0, arg1);
-                return from_candid_TweetResult_n4(this._uploadFile, this._downloadFile, result);
+                return from_candid_TweetResult_n5(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.postTweet(arg0, arg1);
-            return from_candid_TweetResult_n4(this._uploadFile, this._downloadFile, result);
+            return from_candid_TweetResult_n5(this._uploadFile, this._downloadFile, result);
         }
     }
     async resetProgress(): Promise<void> {
@@ -270,6 +334,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.setClientId(arg0);
+            return result;
+        }
+    }
+    async setOpenAIKey(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.setOpenAIKey(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.setOpenAIKey(arg0);
             return result;
         }
     }
@@ -302,13 +380,13 @@ export class Backend implements backendInterface {
         }
     }
 }
-function from_candid_TokenExchangeResult_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _TokenExchangeResult): TokenExchangeResult {
+function from_candid_TokenExchangeResult_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _TokenExchangeResult): TokenExchangeResult {
     return from_candid_variant_n2(_uploadFile, _downloadFile, value);
 }
-function from_candid_TweetResult_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _TweetResult): TweetResult {
+function from_candid_TweetResult_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _TweetResult): TweetResult {
     return from_candid_variant_n2(_uploadFile, _downloadFile, value);
 }
-function from_candid_opt_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [string]): string | null {
+function from_candid_opt_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [string]): string | null {
     return value.length === 0 ? null : value[0];
 }
 function from_candid_variant_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
@@ -329,6 +407,9 @@ function from_candid_variant_n2(_uploadFile: (file: ExternalBlob) => Promise<Uin
         __kind__: "err",
         err: value.err
     } : value;
+}
+function to_candid_opt_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: string | null): [] | [string] {
+    return value === null ? candid_none() : candid_some(value);
 }
 export interface CreateActorOptions {
     agent?: Agent;

@@ -31,4 +31,11 @@ export const mockBackend: backendInterface = {
     headers: [],
     body: new Uint8Array(),
   }),
+  askQuestion: async (_lessonId, _lessonName, _question) => ({
+    __kind__: "ok",
+    ok: "This is a mock AI response for development.",
+  }),
+  getOpenAIKey: async () => null,
+  getQAHistory: async (_lessonId) => [],
+  setOpenAIKey: async (_key) => undefined,
 };

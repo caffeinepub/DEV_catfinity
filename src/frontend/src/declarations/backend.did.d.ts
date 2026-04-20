@@ -21,6 +21,8 @@ export interface HttpTransformArgs {
   'context' : Uint8Array,
   'response' : HttpResponse,
 }
+export interface QA { 'at' : Time, 'question' : string, 'response' : string }
+export type Time = bigint;
 export type TokenExchangeResult = { 'ok' : string } |
   { 'err' : string };
 export interface TokenStatus {
@@ -31,13 +33,20 @@ export interface TokenStatus {
 export type TweetResult = { 'ok' : string } |
   { 'err' : string };
 export interface _SERVICE {
+  'askQuestion' : ActorMethod<
+    [[] | [string], [] | [string], string],
+    { 'ok' : string } |
+      { 'err' : string }
+  >,
   'disconnectX' : ActorMethod<[], undefined>,
   'exchangeToken' : ActorMethod<[string, string, string], TokenExchangeResult>,
   /**
    * / Get the global X (Twitter) OAuth 2.0 Client ID.
    */
   'getClientId' : ActorMethod<[], [] | [string]>,
+  'getOpenAIKey' : ActorMethod<[], [] | [string]>,
   'getProgress' : ActorMethod<[], Array<CompletedLesson>>,
+  'getQAHistory' : ActorMethod<[[] | [string]], Array<QA>>,
   'getTokenStatus' : ActorMethod<[], TokenStatus>,
   'markComplete' : ActorMethod<[string], undefined>,
   'postTweet' : ActorMethod<[string, string], TweetResult>,
@@ -46,6 +55,7 @@ export interface _SERVICE {
    * / Set the global X (Twitter) OAuth 2.0 Client ID.
    */
   'setClientId' : ActorMethod<[string], undefined>,
+  'setOpenAIKey' : ActorMethod<[string], undefined>,
   'storeTokens' : ActorMethod<[string, string, bigint], undefined>,
   'transformTokenResponse' : ActorMethod<[HttpTransformArgs], HttpResponse>,
 }

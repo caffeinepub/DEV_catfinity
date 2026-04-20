@@ -12,10 +12,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, CheckCircle2, Clock, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
+import { QAPanel } from "../components/QAPanel";
 import { LESSONS } from "../data/lessons";
 import { useProgress, useResetProgress } from "../hooks/useProgress";
 import type { LessonProgress } from "../types";
@@ -229,6 +231,23 @@ export function LessonListPage() {
                 );
               })}
         </div>
+      </div>
+
+      {/* Global Q&A panel */}
+      <div className="container mx-auto px-4 pb-16 max-w-3xl">
+        <Separator className="mb-10" />
+        <div className="mb-6">
+          <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest mb-1">
+            Tutor
+          </p>
+          <h2 className="font-display text-2xl font-semibold text-foreground leading-tight mb-1">
+            Ask a question
+          </h2>
+          <p className="text-muted-foreground font-body text-sm">
+            Have a question about (∞, 1)-categories? Ask the CatFinity AI tutor.
+          </p>
+        </div>
+        <QAPanel lessonId={null} data-ocid="landing_qa.panel" />
       </div>
     </div>
   );

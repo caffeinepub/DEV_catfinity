@@ -1,23 +1,31 @@
 // Version: 1.0.0
 type CompletedLesson__143293305 = {completedAt : Int; lessonId : Text};
-type Data__917616847<K, V> =
-  {var count : Nat__1011761150; kvs : [var ?(K, V)]};
-type Internal__150062700<K, V> =
-  {children : [var ?Node__362690243<K, V>]; data : Data__917616847<K, V>};
-type Leaf__147444601<K, V> = {data : Data__917616847<K, V>};
-type List__338271302<T> =
+type Data__45091661<K, V> = {var count : Nat__369452189; kvs : [var ?(K, V)]};
+type Int__616954475 = Int;
+type Int__632235441 = Int__616954475;
+type Internal__112456046<K, V> =
+  {children : [var ?Node__462531142<K, V>]; data : Data__45091661<K, V>};
+type Leaf__57387986<K, V> = {data : Data__45091661<K, V>};
+type List__110325983<T> =
   {
-    var blockIndex : Nat__1011761150;
+    var blockIndex : Nat__369452189;
     var blocks : [var [var ?T]];
-    var elementIndex : Nat__1011761150
+    var elementIndex : Nat__369452189
   };
-type List__341252331<T> = List__338271302<T>;
-type Nat__1011761150 = Nat__920180692;
+type List__706460731<T> = List__110325983<T>;
+type Map__148053270<K, V> = Map__706432854<K, V>;
+type Map__528685958<K, V> =
+  {var root : Node__462531142<K, V>; var size : Nat__369452189};
+type Map__706432854<K, V> = Map__528685958<K, V>;
+type Nat__369452189 = Nat__920180692;
 type Nat__920180692 = Nat;
-type Node__362690243<K, V> =
-  {#internal : Internal__150062700<K, V>; #leaf : Leaf__147444601<K, V>};
+type Node__462531142<K, V> =
+  {#internal : Internal__112456046<K, V>; #leaf : Leaf__57387986<K, V>};
 type OAuthTokens__571533054 =
   {accessToken : Text; expiresAt : Int; refreshToken : Text};
+type QA__979165919 = {at : Time__412504938; question : Text; response : Text};
+type Time__412504938 = Time__791634020;
+type Time__791634020 = Int__632235441;
 type http_header__42844073 = {name : Text; value : Text};
 type http_request_args__695908908 =
   {
@@ -47,17 +55,31 @@ actor {
         shared http_request_args__695908908 ->
           async http_request_result__101127348
     };
+  stable openaiKeyMap :
+    {var root : Node__462531142<Principal, Text>; var size : Nat__369452189};
   stable progressMap :
     {
       var root :
-        Node__362690243<Principal,
-                         List__341252331<CompletedLesson__143293305>>;
-      var size : Nat__1011761150
+        Node__462531142<Principal,
+                         List__706460731<CompletedLesson__143293305>>;
+      var size : Nat__369452189
+    };
+  stable qaHistoryGlobal :
+    {
+      var root : Node__462531142<Principal, List__706460731<QA__979165919>>;
+      var size : Nat__369452189
+    };
+  stable qaHistoryPerLesson :
+    {
+      var root :
+        Node__462531142<Principal,
+                         Map__148053270<Text, List__706460731<QA__979165919>>>;
+      var size : Nat__369452189
     };
   stable tokenMap :
     {
-      var root : Node__362690243<Principal, OAuthTokens__571533054>;
-      var size : Nat__1011761150
+      var root : Node__462531142<Principal, OAuthTokens__571533054>;
+      var size : Nat__369452189
     };
   stable var xClientId : ?Text
 };

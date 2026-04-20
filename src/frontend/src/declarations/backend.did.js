@@ -16,6 +16,12 @@ export const CompletedLesson = IDL.Record({
   'lessonId' : IDL.Text,
   'completedAt' : IDL.Int,
 });
+export const Time = IDL.Int;
+export const QA = IDL.Record({
+  'at' : Time,
+  'question' : IDL.Text,
+  'response' : IDL.Text,
+});
 export const TokenStatus = IDL.Record({
   'isExpired' : IDL.Bool,
   'hasRefreshToken' : IDL.Bool,
@@ -34,6 +40,11 @@ export const HttpTransformArgs = IDL.Record({
 });
 
 export const idlService = IDL.Service({
+  'askQuestion' : IDL.Func(
+      [IDL.Opt(IDL.Text), IDL.Opt(IDL.Text), IDL.Text],
+      [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+      [],
+    ),
   'disconnectX' : IDL.Func([], [], []),
   'exchangeToken' : IDL.Func(
       [IDL.Text, IDL.Text, IDL.Text],
@@ -41,12 +52,15 @@ export const idlService = IDL.Service({
       [],
     ),
   'getClientId' : IDL.Func([], [IDL.Opt(IDL.Text)], ['query']),
+  'getOpenAIKey' : IDL.Func([], [IDL.Opt(IDL.Text)], ['query']),
   'getProgress' : IDL.Func([], [IDL.Vec(CompletedLesson)], ['query']),
+  'getQAHistory' : IDL.Func([IDL.Opt(IDL.Text)], [IDL.Vec(QA)], ['query']),
   'getTokenStatus' : IDL.Func([], [TokenStatus], ['query']),
   'markComplete' : IDL.Func([IDL.Text], [], []),
   'postTweet' : IDL.Func([IDL.Text, IDL.Text], [TweetResult], []),
   'resetProgress' : IDL.Func([], [], []),
   'setClientId' : IDL.Func([IDL.Text], [], []),
+  'setOpenAIKey' : IDL.Func([IDL.Text], [], []),
   'storeTokens' : IDL.Func([IDL.Text, IDL.Text, IDL.Int], [], []),
   'transformTokenResponse' : IDL.Func(
       [HttpTransformArgs],
@@ -66,6 +80,12 @@ export const idlFactory = ({ IDL }) => {
     'lessonId' : IDL.Text,
     'completedAt' : IDL.Int,
   });
+  const Time = IDL.Int;
+  const QA = IDL.Record({
+    'at' : Time,
+    'question' : IDL.Text,
+    'response' : IDL.Text,
+  });
   const TokenStatus = IDL.Record({
     'isExpired' : IDL.Bool,
     'hasRefreshToken' : IDL.Bool,
@@ -84,6 +104,11 @@ export const idlFactory = ({ IDL }) => {
   });
   
   return IDL.Service({
+    'askQuestion' : IDL.Func(
+        [IDL.Opt(IDL.Text), IDL.Opt(IDL.Text), IDL.Text],
+        [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+        [],
+      ),
     'disconnectX' : IDL.Func([], [], []),
     'exchangeToken' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Text],
@@ -91,12 +116,15 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'getClientId' : IDL.Func([], [IDL.Opt(IDL.Text)], ['query']),
+    'getOpenAIKey' : IDL.Func([], [IDL.Opt(IDL.Text)], ['query']),
     'getProgress' : IDL.Func([], [IDL.Vec(CompletedLesson)], ['query']),
+    'getQAHistory' : IDL.Func([IDL.Opt(IDL.Text)], [IDL.Vec(QA)], ['query']),
     'getTokenStatus' : IDL.Func([], [TokenStatus], ['query']),
     'markComplete' : IDL.Func([IDL.Text], [], []),
     'postTweet' : IDL.Func([IDL.Text, IDL.Text], [TweetResult], []),
     'resetProgress' : IDL.Func([], [], []),
     'setClientId' : IDL.Func([IDL.Text], [], []),
+    'setOpenAIKey' : IDL.Func([IDL.Text], [], []),
     'storeTokens' : IDL.Func([IDL.Text, IDL.Text, IDL.Int], [], []),
     'transformTokenResponse' : IDL.Func(
         [HttpTransformArgs],

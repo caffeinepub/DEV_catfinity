@@ -1,21 +1,24 @@
 {
-  "overview": "CatFinity is an academic tutorial website for learning (∞, 1)-categories with Internet Identity authentication, per-learner progress tracking, KaTeX math rendering, and Twitter/X OAuth 2.0 PKCE integration that auto-tweets on lesson completion.",
+  "overview": "CatFinity is a tutorial website for learning (∞, 1)-categories, featuring 8 structured lessons with KaTeX math rendering, Internet Identity authentication, per-learner progress tracking, Twitter/X integration, and AI-powered Q&A panels on every lesson page and the landing page.",
   "features": [
-    "5 sample lessons on (∞, 1)-category theory with KaTeX math formulas",
-    "Per-learner progress tracking with Mark as Complete and Reset Progress",
+    "8 lessons covering (∞,1)-category theory with KaTeX math rendering",
     "Internet Identity authentication",
-    "Twitter/X OAuth 2.0 PKCE integration with auto-tweet on lesson completion",
-    "Settings page for global X Client ID configuration and OAuth token management",
-    "Dark/light mode toggle",
-    "Clean academic aesthetic with serif typography"
+    "Per-learner lesson progress tracking",
+    "Twitter/X integration with OAuth 2.0 PKCE for sharing completions",
+    "AI-powered Q&A panel on every lesson page (per-lesson context)",
+    "Global AI Q&A panel on the landing page",
+    "Per-user OpenAI API key stored securely, masked input on Settings page",
+    "Dark/light mode toggle with academic serif design"
   ],
-  "category": "productivity",
+  "category": "education",
   "tags": [
-    "education",
-    "mathematics",
+    "math",
     "category-theory",
     "tutorial",
-    "academic"
+    "ai",
+    "q-a",
+    "internet-computer",
+    "motoko"
   ],
-  "last_updated": "2026-04-16T18:52:29.676Z"
+  "last_updated": "2026-04-20T18:17:02.220Z"
 }

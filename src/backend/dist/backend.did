@@ -14,6 +14,13 @@ type TokenExchangeResult =
    err: text;
    ok: text;
  };
+type Time = int;
+type QA = 
+ record {
+   at: Time;
+   question: text;
+   response: text;
+ };
 type HttpTransformArgs = 
  record {
    context: blob;
@@ -36,18 +43,26 @@ type CompletedLesson =
    lessonId: text;
  };
 service : {
+  askQuestion: (lessonId: opt text, lessonName: opt text, question: text) ->
+   (variant {
+      err: text;
+      ok: text;
+    });
   disconnectX: () -> ();
   exchangeToken: (code: text, codeVerifier: text, redirectUri: text) ->
    (TokenExchangeResult);
   /// Get the global X (Twitter) OAuth 2.0 Client ID.
   getClientId: () -> (opt text) query;
+  getOpenAIKey: () -> (opt text) query;
   getProgress: () -> (vec CompletedLesson) query;
+  getQAHistory: (lessonId: opt text) -> (vec QA) query;
   getTokenStatus: () -> (TokenStatus) query;
   markComplete: (lessonId: text) -> ();
   postTweet: (lessonId: text, lessonTitle: text) -> (TweetResult);
   resetProgress: () -> ();
   /// Set the global X (Twitter) OAuth 2.0 Client ID.
   setClientId: (id: text) -> ();
+  setOpenAIKey: (key: text) -> ();
   storeTokens: (accessToken: text, refreshToken: text, expiresAt: int) -> ();
   transformTokenResponse: (args: HttpTransformArgs) -> (HttpResponse) query;
 }
