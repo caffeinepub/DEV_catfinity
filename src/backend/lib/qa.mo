@@ -5,7 +5,6 @@ import Time "mo:core/Time";
 import Error "mo:core/Error";
 import Text "mo:core/Text";
 import Blob "mo:core/Blob";
-import Nat16 "mo:core/Nat16";
 import Char "mo:core/Char";
 import Types "../types/qa";
 
@@ -117,12 +116,12 @@ module {
     headers : [HttpHeader];
     body : ?Blob;
     transform : ?{
-      function : shared query ({ response : { status : Nat16; headers : [HttpHeader]; body : Blob }; context : Blob }) -> async { status : Nat16; headers : [HttpHeader]; body : Blob };
+      function : shared query ({ response : { status : Nat; headers : [HttpHeader]; body : Blob }; context : Blob }) -> async { status : Nat; headers : [HttpHeader]; body : Blob };
       context : Blob;
     };
     is_replicated : ?Bool;
   };
-  type HttpResponse = { status : Nat16; headers : [HttpHeader]; body : Blob };
+  type HttpResponse = { status : Nat; headers : [HttpHeader]; body : Blob };
 
   let IC = actor "aaaaa-aa" : actor {
     http_request : (HttpRequestArgs) -> async HttpResponse;
