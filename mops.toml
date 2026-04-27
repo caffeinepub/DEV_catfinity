@@ -32,4 +32,3 @@ args = [
 [dependencies]
 core = "2.4.0"
 x-client = "0.1.2"
-openai-client = "0.1.0"

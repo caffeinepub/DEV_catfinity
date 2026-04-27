@@ -4,84 +4,183 @@ import List "mo:core/List";
 import Time "mo:core/Time";
 import Error "mo:core/Error";
 import Text "mo:core/Text";
+import Blob "mo:core/Blob";
+import Nat16 "mo:core/Nat16";
+import Char "mo:core/Char";
 import Types "../types/qa";
-import ChatApi "mo:openai-client/Apis/ChatApi";
-import Config "mo:openai-client/Config";
-import { type CreateChatCompletionRequest } "mo:openai-client/Models/CreateChatCompletionRequest";
 
 module {
   public type QA = Types.QA;
   public type QALessonMap = Types.QALessonMap;
   public type QAGlobalMap = Types.QAGlobalMap;
 
+  // ── JSON helpers ─────────────────────────────────────────────────────────
+
+  /// Escape a Text value for embedding in a JSON string literal.
+  func escapeJson(s : Text) : Text {
+    var result = "";
+    for (c in s.chars()) {
+      if (c == '\\') {
+        result #= "\\\\";
+      } else if (c.toText() == "\"") {
+        result #= "\\\"";
+      } else if (c == '\n') {
+        result #= "\\n";
+      } else if (c == '\r') {
+        result #= "\\r";
+      } else {
+        result #= c.toText();
+      };
+    };
+    result;
+  };
+
+  /// Minimal extraction of choices[0].message.content from OpenAI chat response JSON.
+  /// Finds the first "content": after "message": and extracts the string value.
+  func extractOpenAIContent(json : Text) : Text {
+    // Find "message": then "content":
+    let msgNeedle = "\"message\":";
+    let msgParts = json.split(#text msgNeedle);
+    var afterMessage : ?Text = null;
+    var first = true;
+    for (part in msgParts) {
+      if (not first and afterMessage == null) {
+        afterMessage := ?part;
+      };
+      first := false;
+    };
+    let msgRest = switch (afterMessage) {
+      case (?r) r;
+      case null { return "Error: could not find message in response" };
+    };
+
+    let contentNeedle = "\"content\":";
+    let contentParts = msgRest.split(#text contentNeedle);
+    var afterContent : ?Text = null;
+    first := true;
+    for (part in contentParts) {
+      if (not first and afterContent == null) {
+        afterContent := ?part;
+      };
+      first := false;
+    };
+    let contentRest = switch (afterContent) {
+      case (?r) r;
+      case null { return "Error: could not find content in response" };
+    };
+
+    // contentRest starts with optional whitespace then either `"` (string) or `null`
+    let trimmed = contentRest.trimStart(#char ' ');
+    switch (trimmed.stripStart(#text "\"")) {
+      case (?inner) {
+        // Read characters until unescaped closing quote
+        var result = "";
+        var escaped = false;
+        var done = false;
+        for (c in inner.chars()) {
+          if (done) {
+            // skip remaining
+          } else if (escaped) {
+            if (c.toText() == "\"") {
+              result #= "\"";
+            } else if (c == '\\') {
+              result #= "\\";
+            } else if (c == 'n') {
+              result #= "\n";
+            } else if (c == 'r') {
+              result #= "\r";
+            } else {
+              result #= c.toText();
+            };
+            escaped := false;
+          } else if (c == '\\') {
+            escaped := true;
+          } else if (c.toText() == "\"") {
+            done := true;
+          } else {
+            result #= c.toText();
+          };
+        };
+        result;
+      };
+      case null "Error: content is not a string";
+    };
+  };
+
+  // ── IC management canister types ─────────────────────────────────────────
+
+  type HttpHeader = { name : Text; value : Text };
+  type HttpRequestArgs = {
+    url : Text;
+    max_response_bytes : ?Nat64;
+    method : { #get; #head; #post };
+    headers : [HttpHeader];
+    body : ?Blob;
+    transform : ?{
+      function : shared query ({ response : { status : Nat16; headers : [HttpHeader]; body : Blob }; context : Blob }) -> async { status : Nat16; headers : [HttpHeader]; body : Blob };
+      context : Blob;
+    };
+    is_replicated : ?Bool;
+  };
+  type HttpResponse = { status : Nat16; headers : [HttpHeader]; body : Blob };
+
+  let IC = actor "aaaaa-aa" : actor {
+    http_request : (HttpRequestArgs) -> async HttpResponse;
+  };
+
   // ── OpenAI call ──────────────────────────────────────────────────────────
 
-  /// Call OpenAI ChatCompletion via the openai-client package.
+  /// Call OpenAI ChatCompletion directly via IC http_request (bypasses openai-client package bug).
   /// Returns the assistant message text on success, or an error string on failure (never traps).
   func callOpenAI(
     systemPrompt : Text,
     userMessage : Text,
     userApiKey : Text,
   ) : async Text {
-    let config : Config.Config = {
-      Config.defaultConfig with
-      auth = ?#bearer(userApiKey);
-      is_replicated = ?false;
-      max_response_bytes = ?50_000;
-    };
-
-    let request : CreateChatCompletionRequest = {
-      model = {};
-      messages = [
-        #ChatCompletionRequestSystemMessage({
-          content = #one_of_0(systemPrompt);
-          role = #system_;
-          name = null;
-        }),
-        #ChatCompletionRequestUserMessage({
-          content = #one_of_0(userMessage);
-          role = #user;
-          name = null;
-        }),
-      ];
-      metadata = null;
-      temperature = null;
-      top_p = null;
-      user = null;
-      service_tier = null;
-      modalities = null;
-      reasoning_effort = null;
-      max_completion_tokens = null;
-      frequency_penalty = null;
-      presence_penalty = null;
-      web_search_options = null;
-      top_logprobs = null;
-      response_format = null;
-      audio = null;
-      store = null;
-      stream = null;
-      stop = null;
-      logit_bias = null;
-      logprobs = null;
-      max_tokens = null;
-      n = null;
-      prediction = null;
-      seed = null;
-      stream_options = null;
-      tools = null;
-      tool_choice = null;
-      parallel_tool_calls = null;
-      function_call = null;
-      functions = null;
-    };
-
+    let body = "{\"model\":\"gpt-4o-mini\",\"messages\":[{\"role\":\"system\",\"content\":\""
+      # escapeJson(systemPrompt)
+      # "\"},{\"role\":\"user\",\"content\":\""
+      # escapeJson(userMessage)
+      # "\"}],\"max_tokens\":512}";
+    let bodyBytes = body.encodeUtf8();
     try {
-      let response = await* ChatApi.createChatCompletion(config, request);
-      let choices = response.choices;
-      if (choices.size() == 0) {
-        "No response choices returned.";
+      let response = await (with cycles = 50_000_000_000) IC.http_request({
+        url = "https://api.openai.com/v1/chat/completions";
+        max_response_bytes = ?50_000;
+        method = #post;
+        headers = [
+          { name = "Content-Type"; value = "application/json" },
+          { name = "Authorization"; value = "Bearer " # userApiKey },
+        ];
+        body = ?bodyBytes;
+        transform = null;
+        is_replicated = ?false;
+      });
+      if (response.status == 200) {
+        let responseText = switch (response.body.decodeUtf8()) {
+          case (?t) t;
+          case null "Error: could not decode response";
+        };
+        extractOpenAIContent(responseText);
       } else {
-        choices[0].message.content;
+        let statusStr = response.status.toText();
+        let bodyPreview = switch (response.body.decodeUtf8()) {
+          case (?t) {
+            if (t.size() > 200) {
+              var preview = "";
+              var count = 0;
+              for (c in t.chars()) {
+                if (count < 200) {
+                  preview #= c.toText();
+                  count += 1;
+                };
+              };
+              preview;
+            } else t;
+          };
+          case null "(unreadable)";
+        };
+        "OpenAI returned " # statusStr # ": " # bodyPreview;
       };
     } catch (e) {
       "Request failed: " # e.message();
