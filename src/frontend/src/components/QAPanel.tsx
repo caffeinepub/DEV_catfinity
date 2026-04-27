@@ -297,21 +297,26 @@ export function QAPanel({ lessonId, lessonName }: QAPanelProps) {
   return (
     <div className="space-y-4" data-ocid="qa_panel.panel">
       {/* Error banner */}
-      {askQuestion.isError && (
-        <div
-          className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3"
-          data-ocid="qa_panel.error_state"
-        >
-          <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
-          <p className="text-sm font-body text-destructive leading-snug">
-            {(askQuestion.error as Error).message.includes("401")
-              ? "Invalid OpenAI API key — please update it in Settings."
-              : (askQuestion.error as Error).message.includes("429")
-                ? "OpenAI rate limit reached. Please wait a moment and try again."
-                : (askQuestion.error as Error).message}
-          </p>
-        </div>
-      )}
+      {askQuestion.isError &&
+        (() => {
+          // biome-ignore lint/suspicious/noConsole: intentional raw-error logging for debugging
+          console.error("OPENAI_RAW:", (askQuestion.error as Error).message);
+          return (
+            <div
+              className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3"
+              data-ocid="qa_panel.error_state"
+            >
+              <AlertTriangle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <p className="text-sm font-body text-destructive leading-snug">
+                {(askQuestion.error as Error).message.includes("401")
+                  ? "Invalid OpenAI API key — please update it in Settings."
+                  : (askQuestion.error as Error).message.includes("429")
+                    ? "OpenAI rate limit reached. Please wait a moment and try again."
+                    : (askQuestion.error as Error).message}
+              </p>
+            </div>
+          );
+        })()}
 
       {/* Input row or no-key message */}
       {hasApiKey ? (

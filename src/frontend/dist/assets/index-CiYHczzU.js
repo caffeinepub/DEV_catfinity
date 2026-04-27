@@ -1,4 +1,4 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/LessonListPage-BsNFgdeL.js","assets/alert-dialog-6LP6d32i.js","assets/useOpenAI-C8Exkoez.js","assets/backend-e9L4tXdx.js","assets/useProgress-BI5o6F5Z.js","assets/LessonDetailPage-BN_huqBA.js","assets/useXToken-DtH2Mvye.js","assets/twitter-qvFfsyGh.js","assets/LessonDetailPage-CINdzQB7.css","assets/SettingsPage-D2JSApD9.js","assets/circle-alert-nWJPZQNp.js","assets/OAuthCallbackPage-Bn-k6A3w.js"])))=>i.map(i=>d[i]);
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/LessonListPage-BE-bMtXZ.js","assets/alert-dialog-B3vuaROp.js","assets/useOpenAI-BcSxDSwy.js","assets/backend-DcBCZdVd.js","assets/useProgress-Bh2p_KPB.js","assets/LessonDetailPage-DS3LkHHn.js","assets/useXToken-BNMkTKjT.js","assets/twitter-gqKVTa7L.js","assets/LessonDetailPage-CINdzQB7.css","assets/SettingsPage-Cogf9NRx.js","assets/circle-alert-DwaDx3nP.js","assets/OAuthCallbackPage-BT20Afpo.js"])))=>i.map(i=>d[i]);
 var __defProp = Object.defineProperty;
 var __typeError = (msg) => {
   throw TypeError(msg);
@@ -34945,12 +34945,12 @@ function LoginPage() {
     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground mt-6 max-w-xs", children: "Internet Identity is a decentralized authentication system that doesn't share your identity across services." })
   ] });
 }
-const LessonListPage = () => __vitePreload(() => import("./LessonListPage-BsNFgdeL.js"), true ? __vite__mapDeps([0,1,2,3,4]) : void 0).then((m2) => ({ default: m2.LessonListPage }));
-const LessonDetailPage = () => __vitePreload(() => import("./LessonDetailPage-BN_huqBA.js"), true ? __vite__mapDeps([5,2,3,4,6,7,8]) : void 0).then((m2) => ({
+const LessonListPage = () => __vitePreload(() => import("./LessonListPage-BE-bMtXZ.js"), true ? __vite__mapDeps([0,1,2,3,4]) : void 0).then((m2) => ({ default: m2.LessonListPage }));
+const LessonDetailPage = () => __vitePreload(() => import("./LessonDetailPage-DS3LkHHn.js"), true ? __vite__mapDeps([5,2,3,4,6,7,8]) : void 0).then((m2) => ({
   default: m2.LessonDetailPage
 }));
-const SettingsPage = () => __vitePreload(() => import("./SettingsPage-D2JSApD9.js"), true ? __vite__mapDeps([9,1,2,3,6,7,10]) : void 0).then((m2) => ({ default: m2.SettingsPage }));
-const OAuthCallbackPage = () => __vitePreload(() => import("./OAuthCallbackPage-Bn-k6A3w.js"), true ? __vite__mapDeps([11,3,10,7]) : void 0).then((m2) => ({
+const SettingsPage = () => __vitePreload(() => import("./SettingsPage-Cogf9NRx.js"), true ? __vite__mapDeps([9,1,2,3,6,7,10]) : void 0).then((m2) => ({ default: m2.SettingsPage }));
+const OAuthCallbackPage = () => __vitePreload(() => import("./OAuthCallbackPage-BT20Afpo.js"), true ? __vite__mapDeps([11,3,10,7]) : void 0).then((m2) => ({
   default: m2.OAuthCallbackPage
 }));
 function DynamicPage({

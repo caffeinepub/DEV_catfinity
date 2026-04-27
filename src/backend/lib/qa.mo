@@ -216,7 +216,7 @@ module {
           result.choices[0].message.content;
         };
       } catch (e) {
-        e.message();
+        "OPENAI_RAW: " # e.message();
       };
     } else {
       // ── hand-rolled IC.http_request fallback path ──

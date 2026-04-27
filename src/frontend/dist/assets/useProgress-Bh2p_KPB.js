@@ -1,6 +1,6 @@
-import { c as createLucideIcon, j as jsxRuntimeExports, a as cn, r as reactExports, B as Button, L as Link, e as useQueryClient } from "./index-B5ckAo-y.js";
-import { u as useOpenAIKey, b as useGetQAHistory, c as useAskQuestion, I as Input, d as useMutation } from "./useOpenAI-C8Exkoez.js";
-import { u as useActor, a as useQuery, c as createActor } from "./backend-e9L4tXdx.js";
+import { c as createLucideIcon, j as jsxRuntimeExports, a as cn, r as reactExports, B as Button, L as Link, e as useQueryClient } from "./index-CiYHczzU.js";
+import { u as useOpenAIKey, b as useGetQAHistory, c as useAskQuestion, I as Input, d as useMutation } from "./useOpenAI-BcSxDSwy.js";
+import { u as useActor, a as useQuery, c as createActor } from "./backend-DcBCZdVd.js";
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -277,17 +277,20 @@ function QAPanel({ lessonId, lessonName }) {
     ] });
   }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", "data-ocid": "qa_panel.panel", children: [
-    askQuestion.isError && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "div",
-      {
-        className: "flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3",
-        "data-ocid": "qa_panel.error_state",
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(TriangleAlert, { className: "w-4 h-4 text-destructive shrink-0 mt-0.5" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-body text-destructive leading-snug", children: askQuestion.error.message.includes("401") ? "Invalid OpenAI API key — please update it in Settings." : askQuestion.error.message.includes("429") ? "OpenAI rate limit reached. Please wait a moment and try again." : askQuestion.error.message })
-        ]
-      }
-    ),
+    askQuestion.isError && (() => {
+      console.error("OPENAI_RAW:", askQuestion.error.message);
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          className: "flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3",
+          "data-ocid": "qa_panel.error_state",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TriangleAlert, { className: "w-4 h-4 text-destructive shrink-0 mt-0.5" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-body text-destructive leading-snug", children: askQuestion.error.message.includes("401") ? "Invalid OpenAI API key — please update it in Settings." : askQuestion.error.message.includes("429") ? "OpenAI rate limit reached. Please wait a moment and try again." : askQuestion.error.message })
+          ]
+        }
+      );
+    })(),
     hasApiKey ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", "data-ocid": "qa_panel.input_row", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         Input,
