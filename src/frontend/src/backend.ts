@@ -156,8 +156,12 @@ export interface backendInterface {
      * / Set the global X (Twitter) OAuth 2.0 Client ID.
      */
     setClientId(id: string): Promise<void>;
+    /**
+     * / Get the global X (Twitter) OAuth 2.0 Client ID.
+     */
     setOpenAIKey(key: string): Promise<void>;
     storeTokens(accessToken: string, refreshToken: string, expiresAt: bigint): Promise<void>;
+    transformOpenAI(args: HttpTransformArgs): Promise<HttpResponse>;
     transformTokenResponse(args: HttpTransformArgs): Promise<HttpResponse>;
 }
 import type { TokenExchangeResult as _TokenExchangeResult, TweetResult as _TweetResult } from "./declarations/backend.did.d.ts";
@@ -362,6 +366,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.storeTokens(arg0, arg1, arg2);
+            return result;
+        }
+    }
+    async transformOpenAI(arg0: HttpTransformArgs): Promise<HttpResponse> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.transformOpenAI(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.transformOpenAI(arg0);
             return result;
         }
     }

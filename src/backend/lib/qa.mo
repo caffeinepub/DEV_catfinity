@@ -6,6 +6,8 @@ import Error "mo:core/Error";
 import Text "mo:core/Text";
 import Blob "mo:core/Blob";
 import Char "mo:core/Char";
+import Nat "mo:core/Nat";
+import Iter "mo:core/Iter";
 import Types "../types/qa";
 
 module {
@@ -131,10 +133,12 @@ module {
 
   /// Call OpenAI ChatCompletion directly via IC http_request (bypasses openai-client package bug).
   /// Returns the assistant message text on success, or an error string on failure (never traps).
+  /// transformFn is passed from the actor so the IC can strip non-deterministic headers.
   func callOpenAI(
     systemPrompt : Text,
     userMessage : Text,
     userApiKey : Text,
+    transformFn : shared query ({ response : { status : Nat; headers : [HttpHeader]; body : Blob }; context : Blob }) -> async { status : Nat; headers : [HttpHeader]; body : Blob },
   ) : async Text {
     let body = "{\"model\":\"gpt-4o-mini\",\"messages\":[{\"role\":\"system\",\"content\":\""
       # escapeJson(systemPrompt)
@@ -142,7 +146,8 @@ module {
       # escapeJson(userMessage)
       # "\"}],\"max_tokens\":512}";
     let bodyBytes = body.encodeUtf8();
-    try {
+
+    let doRequest = func() : async Text {
       let response = await (with cycles = 50_000_000_000) IC.http_request({
         url = "https://api.openai.com/v1/chat/completions";
         max_response_bytes = ?50_000;
@@ -152,7 +157,10 @@ module {
           { name = "Authorization"; value = "Bearer " # userApiKey },
         ];
         body = ?bodyBytes;
-        transform = null;
+        transform = ?{
+          function = transformFn;
+          context = "" : Blob;
+        };
         is_replicated = ?false;
       });
       if (response.status == 200) {
@@ -166,23 +174,29 @@ module {
         let bodyPreview = switch (response.body.decodeUtf8()) {
           case (?t) {
             if (t.size() > 200) {
-              var preview = "";
-              var count = 0;
-              for (c in t.chars()) {
-                if (count < 200) {
-                  preview #= c.toText();
-                  count += 1;
-                };
-              };
-              preview;
+              let iter = t.chars();
+              let truncated = iter.take(200);
+              Text.fromIter(truncated);
             } else t;
           };
-          case null "(unreadable)";
+          case null "no body";
         };
         "OpenAI returned " # statusStr # ": " # bodyPreview;
       };
+    };
+
+    try {
+      await doRequest();
     } catch (e) {
-      "Request failed: " # e.message();
+      if (e.message().contains(#text "timed out")) {
+        try {
+          await doRequest();
+        } catch (e2) {
+          "Request failed: " # e2.message();
+        };
+      } else {
+        "Request failed: " # e.message();
+      };
     };
   };
 
@@ -198,10 +212,11 @@ module {
     lessonName : Text,
     question : Text,
     userApiKey : Text,
+    transformFn : shared query ({ response : { status : Nat; headers : [HttpHeader]; body : Blob }; context : Blob }) -> async { status : Nat; headers : [HttpHeader]; body : Blob },
   ) : async Text {
     let systemPrompt = "You are a helpful CatFinity tutor. The user is studying the lesson \""
       # lessonName # "\".";
-    let response = await callOpenAI(systemPrompt, question, userApiKey);
+    let response = await callOpenAI(systemPrompt, question, userApiKey, transformFn);
 
     // Append to per-lesson history (caller → lessonId → List<QA>)
     let callerMap = switch (qaHistoryPerLesson.get(caller)) {
@@ -232,9 +247,10 @@ module {
     caller : Principal,
     question : Text,
     userApiKey : Text,
+    transformFn : shared query ({ response : { status : Nat; headers : [HttpHeader]; body : Blob }; context : Blob }) -> async { status : Nat; headers : [HttpHeader]; body : Blob },
   ) : async Text {
     let systemPrompt = "You are a helpful CatFinity tutor responding on the landing page.";
-    let response = await callOpenAI(systemPrompt, question, userApiKey);
+    let response = await callOpenAI(systemPrompt, question, userApiKey, transformFn);
 
     // Append to global history (caller → List<QA>)
     let list = switch (qaHistoryGlobal.get(caller)) {

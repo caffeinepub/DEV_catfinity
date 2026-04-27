@@ -7,7 +7,7 @@ var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot
 var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
 var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
 var _client, _currentQuery, _currentQueryInitialState, _currentResult, _currentResultState, _currentResultOptions, _currentThenable, _selectError, _selectFn, _selectResult, _lastQueryWithDefinedData, _staleTimeoutId, _refetchIntervalId, _currentRefetchInterval, _trackedProps, _QueryObserver_instances, executeFetch_fn, updateStaleTimeout_fn, computeRefetchInterval_fn, updateRefetchInterval_fn, updateTimers_fn, clearStaleTimeout_fn, clearRefetchInterval_fn, updateQuery_fn, notify_fn, _a;
-import { y as ProtocolError, T as TimeoutWaitingForResponseErrorCode, z as utf8ToBytes, E as ExternalError, M as MissingRootKeyErrorCode, C as Certificate, A as lookupResultToBuffer, D as RequestStatusResponseStatus, U as UnknownError, F as RequestStatusDoneNoReplyErrorCode, G as RejectError, H as CertifiedRejectErrorCode, I as UNREACHABLE_ERROR, J as InputError, K as InvalidReadStateRequestErrorCode, N as ReadRequestType, O as Principal, Q as IDL, V as MissingCanisterIdErrorCode, W as HttpAgent, X as encode, Y as QueryResponseStatus, Z as UncertifiedRejectErrorCode, _ as isV3ResponseBody, $ as isV2ResponseBody, a0 as UncertifiedRejectUpdateErrorCode, a1 as UnexpectedErrorCode, a2 as decode, m as Subscribable, a3 as pendingThenable, a4 as resolveEnabled, s as shallowEqualObjects, a5 as resolveStaleTime, q as noop, a6 as environmentManager, a7 as isValidTimeout, a8 as timeUntilStale, a9 as timeoutManager, aa as focusManager, ab as fetchState, ac as replaceData, p as notifyManager, r as reactExports, t as shouldThrowError, e as useQueryClient, ad as useInternetIdentity, ae as createActorWithConfig, af as Variant, ag as Record, ah as Vec, ai as Service, aj as Func, ak as Opt, al as Text, am as Int, an as Bool, ao as Nat, ap as Nat8 } from "./index-D4juFhwD.js";
+import { y as ProtocolError, T as TimeoutWaitingForResponseErrorCode, z as utf8ToBytes, E as ExternalError, M as MissingRootKeyErrorCode, C as Certificate, A as lookupResultToBuffer, D as RequestStatusResponseStatus, U as UnknownError, F as RequestStatusDoneNoReplyErrorCode, G as RejectError, H as CertifiedRejectErrorCode, I as UNREACHABLE_ERROR, J as InputError, K as InvalidReadStateRequestErrorCode, N as ReadRequestType, O as Principal, Q as IDL, V as MissingCanisterIdErrorCode, W as HttpAgent, X as encode, Y as QueryResponseStatus, Z as UncertifiedRejectErrorCode, _ as isV3ResponseBody, $ as isV2ResponseBody, a0 as UncertifiedRejectUpdateErrorCode, a1 as UnexpectedErrorCode, a2 as decode, m as Subscribable, a3 as pendingThenable, a4 as resolveEnabled, s as shallowEqualObjects, a5 as resolveStaleTime, q as noop, a6 as environmentManager, a7 as isValidTimeout, a8 as timeUntilStale, a9 as timeoutManager, aa as focusManager, ab as fetchState, ac as replaceData, p as notifyManager, r as reactExports, t as shouldThrowError, e as useQueryClient, ad as useInternetIdentity, ae as createActorWithConfig, af as Variant, ag as Record, ah as Vec, ai as Service, aj as Func, ak as Opt, al as Text, am as Int, an as Bool, ao as Nat, ap as Nat8 } from "./index-B5ckAo-y.js";
 const FIVE_MINUTES_IN_MSEC = 5 * 60 * 1e3;
 function defaultStrategy() {
   return chain(conditionalDelay(once(), 1e3), backoff(1e3, 1.2), timeout(FIVE_MINUTES_IN_MSEC));
@@ -1122,6 +1122,7 @@ Service({
   "setClientId": Func([Text], [], []),
   "setOpenAIKey": Func([Text], [], []),
   "storeTokens": Func([Text, Text, Int], [], []),
+  "transformOpenAI": Func([HttpTransformArgs], [HttpResponse], ["query"]),
   "transformTokenResponse": Func(
     [HttpTransformArgs],
     [HttpResponse],
@@ -1182,6 +1183,11 @@ const idlFactory = ({ IDL: IDL2 }) => {
     "setClientId": IDL2.Func([IDL2.Text], [], []),
     "setOpenAIKey": IDL2.Func([IDL2.Text], [], []),
     "storeTokens": IDL2.Func([IDL2.Text, IDL2.Text, IDL2.Int], [], []),
+    "transformOpenAI": IDL2.Func(
+      [HttpTransformArgs2],
+      [HttpResponse2],
+      ["query"]
+    ),
     "transformTokenResponse": IDL2.Func(
       [HttpTransformArgs2],
       [HttpResponse2],
@@ -1397,6 +1403,20 @@ class Backend {
       }
     } else {
       const result = await this.actor.storeTokens(arg0, arg1, arg2);
+      return result;
+    }
+  }
+  async transformOpenAI(arg0) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.transformOpenAI(arg0);
+        return result;
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.transformOpenAI(arg0);
       return result;
     }
   }

@@ -62,7 +62,9 @@ service : {
   resetProgress: () -> ();
   /// Set the global X (Twitter) OAuth 2.0 Client ID.
   setClientId: (id: text) -> ();
+  /// Get the global X (Twitter) OAuth 2.0 Client ID.
   setOpenAIKey: (key: text) -> ();
   storeTokens: (accessToken: text, refreshToken: text, expiresAt: int) -> ();
+  transformOpenAI: (args: HttpTransformArgs) -> (HttpResponse) query;
   transformTokenResponse: (args: HttpTransformArgs) -> (HttpResponse) query;
 }

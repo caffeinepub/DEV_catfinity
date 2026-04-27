@@ -55,8 +55,12 @@ export interface _SERVICE {
    * / Set the global X (Twitter) OAuth 2.0 Client ID.
    */
   'setClientId' : ActorMethod<[string], undefined>,
+  /**
+   * / Get the global X (Twitter) OAuth 2.0 Client ID.
+   */
   'setOpenAIKey' : ActorMethod<[string], undefined>,
   'storeTokens' : ActorMethod<[string, string, bigint], undefined>,
+  'transformOpenAI' : ActorMethod<[HttpTransformArgs], HttpResponse>,
   'transformTokenResponse' : ActorMethod<[HttpTransformArgs], HttpResponse>,
 }
 export declare const idlService: IDL.ServiceClass;

@@ -44,10 +44,14 @@ actor {
     { args.response with headers = [] };
   };
 
+  public shared query func transformOpenAI(args : HttpTransformArgs) : async HttpResponse {
+    { args.response with headers = [] };
+  };
+
   // --- Mixin includes ---
   include ProgressApi(progressMap);
   include TwitterApi(tokenMap, func() = xClientId, transformTokenResponse);
-  include QAApi(qaHistoryPerLesson, qaHistoryGlobal, openaiKeyMap);
+  include QAApi(qaHistoryPerLesson, qaHistoryGlobal, openaiKeyMap, transformOpenAI);
 
   // --- Settings API (direct, needs write access to xClientId) ---
 

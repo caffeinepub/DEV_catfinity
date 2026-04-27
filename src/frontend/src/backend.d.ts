@@ -74,7 +74,11 @@ export interface backendInterface {
      * / Set the global X (Twitter) OAuth 2.0 Client ID.
      */
     setClientId(id: string): Promise<void>;
+    /**
+     * / Get the global X (Twitter) OAuth 2.0 Client ID.
+     */
     setOpenAIKey(key: string): Promise<void>;
     storeTokens(accessToken: string, refreshToken: string, expiresAt: bigint): Promise<void>;
+    transformOpenAI(args: HttpTransformArgs): Promise<HttpResponse>;
     transformTokenResponse(args: HttpTransformArgs): Promise<HttpResponse>;
 }

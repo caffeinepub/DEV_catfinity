@@ -6,6 +6,7 @@ mixin (
   qaHistoryPerLesson : Types.QALessonMap,
   qaHistoryGlobal : Types.QAGlobalMap,
   openaiKeyMap : Types.OpenAIKeyMap,
+  transformFn : shared query ({ response : { status : Nat; headers : [{ name : Text; value : Text }]; body : Blob }; context : Blob }) -> async { status : Nat; headers : [{ name : Text; value : Text }]; body : Blob },
 ) {
 
   /// Ask a question.
@@ -29,7 +30,7 @@ mixin (
           case (?n) n;
           case null lid;
         };
-        let result = await QALib.askLesson(qaHistoryPerLesson, caller, lid, name, question, apiKey);
+        let result = await QALib.askLesson(qaHistoryPerLesson, caller, lid, name, question, apiKey, transformFn);
         // If the response starts with "Error " or "Request failed:", surface as #err
         if (result.startsWith(#text "Error ") or result.startsWith(#text "Request failed:")) {
           #err(result);
@@ -38,7 +39,7 @@ mixin (
         };
       };
       case null {
-        let result = await QALib.askGlobal(qaHistoryGlobal, caller, question, apiKey);
+        let result = await QALib.askGlobal(qaHistoryGlobal, caller, question, apiKey, transformFn);
         if (result.startsWith(#text "Error ") or result.startsWith(#text "Request failed:")) {
           #err(result);
         } else {

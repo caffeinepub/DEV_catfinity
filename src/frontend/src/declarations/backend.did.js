@@ -62,6 +62,7 @@ export const idlService = IDL.Service({
   'setClientId' : IDL.Func([IDL.Text], [], []),
   'setOpenAIKey' : IDL.Func([IDL.Text], [], []),
   'storeTokens' : IDL.Func([IDL.Text, IDL.Text, IDL.Int], [], []),
+  'transformOpenAI' : IDL.Func([HttpTransformArgs], [HttpResponse], ['query']),
   'transformTokenResponse' : IDL.Func(
       [HttpTransformArgs],
       [HttpResponse],
@@ -126,6 +127,11 @@ export const idlFactory = ({ IDL }) => {
     'setClientId' : IDL.Func([IDL.Text], [], []),
     'setOpenAIKey' : IDL.Func([IDL.Text], [], []),
     'storeTokens' : IDL.Func([IDL.Text, IDL.Text, IDL.Int], [], []),
+    'transformOpenAI' : IDL.Func(
+        [HttpTransformArgs],
+        [HttpResponse],
+        ['query'],
+      ),
     'transformTokenResponse' : IDL.Func(
         [HttpTransformArgs],
         [HttpResponse],
