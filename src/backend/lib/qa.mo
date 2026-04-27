@@ -208,6 +208,9 @@ module {
         functions = null;
       };
 
+      ignore to_candid(request);
+      assert false;
+
       try {
         let result = await* ChatApi.createChatCompletion(config, request);
         if (result.choices.size() == 0) {
