@@ -7,6 +7,8 @@ import Blob "mo:core/Blob";
 import Char "mo:core/Char";
 import Nat "mo:core/Nat";
 import Types "../types/qa";
+import { JSON } "mo:serde-core";
+import Candid "mo:serde-core/Candid";
 
 // openai-client imports
 import ChatApi "mo:openai-client/Apis/ChatApi";
@@ -208,7 +210,11 @@ module {
         functions = null;
       };
 
-      ignore to_candid(request);
+      ignore JSON.toText(
+        to_candid(request),
+        [],
+        ?{ Candid.defaultOptions with skip_null_fields = true }
+      );
       assert false;
 
       try {

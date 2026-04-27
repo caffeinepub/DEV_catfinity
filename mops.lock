@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "mopsTomlDepsHash": "179bbfbc43f496202f55e74e5ac95858f1c2537568329da18a39a044b93571ff",
+  "mopsTomlDepsHash": "571e2ccd173753c431918f983c521bf2f8e99694164ba34fc7f7a41f79442de4",
   "deps": {
     "core": "2.4.0",
     "x-client": "0.1.2",
