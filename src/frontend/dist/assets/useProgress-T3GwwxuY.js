@@ -1,6 +1,6 @@
-import { c as createLucideIcon, j as jsxRuntimeExports, a as cn, r as reactExports, B as Button, L as Link, e as useQueryClient } from "./index-CiYHczzU.js";
-import { u as useOpenAIKey, b as useGetQAHistory, c as useAskQuestion, I as Input, d as useMutation } from "./useOpenAI-BcSxDSwy.js";
-import { u as useActor, a as useQuery, c as createActor } from "./backend-DcBCZdVd.js";
+import { c as createLucideIcon, j as jsxRuntimeExports, a as cn, r as reactExports, B as Button, L as Link, e as useQueryClient } from "./index-CUOFokqz.js";
+import { u as useOpenAIKey, b as useGetQAHistory, c as useAskQuestion, I as Input, d as useMutation } from "./useOpenAI-DfOUgmbt.js";
+import { u as useActor, a as useQuery, c as createActor } from "./backend-BRVNvjEa.js";
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -795,6 +795,248 @@ const LESSONS = [
           {
             type: "paragraph",
             text: "The ∞-categorical Yoneda lemma ensures that every (∞, 1)-category embeds fully faithfully into its ∞-category of presheaves, providing the universal ∞-categorical cocompletion."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "model-categories",
+    title: "Model Categories",
+    subtitle: "Module 6",
+    description: "Quillen's model categories provide a powerful axiomatic framework for abstract homotopy theory, connecting classical topology to (∞, 1)-categories.",
+    estimatedMinutes: 65,
+    sections: [
+      {
+        heading: "The Axioms",
+        content: [
+          {
+            type: "paragraph",
+            text: "A model category is a category equipped with three distinguished classes of morphisms — weak equivalences, fibrations, and cofibrations — satisfying axioms that allow the construction of a homotopy category."
+          },
+          {
+            type: "definition",
+            term: "Model Category",
+            body: [
+              { kind: "text", text: "A " },
+              { kind: "math", latex: "\\mathbf{model\\ category}" },
+              { kind: "text", text: " is a complete and cocomplete category " },
+              { kind: "math", latex: "\\mathcal{M}" },
+              {
+                kind: "text",
+                text: " together with three classes of maps — weak equivalences ("
+              },
+              { kind: "math", latex: "\\mathcal{W}" },
+              { kind: "text", text: "), fibrations (" },
+              { kind: "math", latex: "\\mathcal{F}" },
+              { kind: "text", text: "), cofibrations (" },
+              { kind: "math", latex: "\\mathcal{C}" },
+              {
+                kind: "text",
+                text: ") — satisfying the two-out-of-three property, retract closure, lifting, and factorization axioms."
+              }
+            ]
+          },
+          {
+            type: "math-block",
+            latex: "\\mathcal{M} = (\\mathcal{M}, \\mathcal{W}, \\mathcal{F}, \\mathcal{C})"
+          }
+        ]
+      },
+      {
+        heading: "The Homotopy Category",
+        content: [
+          {
+            type: "paragraph",
+            text: "The homotopy category Ho(M) is obtained from a model category by formally inverting the weak equivalences. This is the shadow of the (∞, 1)-categorical localization."
+          },
+          {
+            type: "math-block",
+            latex: "\\mathrm{Ho}(\\mathcal{M}) = \\mathcal{M}[\\mathcal{W}^{-1}]"
+          },
+          {
+            type: "paragraph",
+            text: "Quillen adjunctions and Quillen equivalences between model categories induce adjunctions and equivalences between the corresponding (∞, 1)-categories."
+          }
+        ]
+      },
+      {
+        heading: "Key Examples",
+        content: [
+          {
+            type: "paragraph",
+            text: "The Kan-Quillen model structure on simplicial sets (weak equivalences = weak homotopy equivalences of geometric realizations) is Quillen equivalent to the standard model structure on topological spaces."
+          },
+          {
+            type: "math-block",
+            latex: "\\mathbf{sSet}_{\\mathrm{KQ}} \\underset{|{-}|}{{\\rightleftharpoons}} \\mathbf{Top}_{\\mathrm{Quillen}} : \\mathrm{Sing}"
+          },
+          {
+            type: "paragraph",
+            text: "The Joyal model structure on simplicial sets has weak equivalences the categorical equivalences of quasi-categories, and its fibrant objects are exactly the quasi-categories."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "enriched-categories",
+    title: "Enriched Categories",
+    subtitle: "Module 7",
+    description: "Enriched category theory generalizes classical categories by replacing hom-sets with objects in a monoidal category, providing the language for (∞, 1)-categories enriched over spaces.",
+    estimatedMinutes: 60,
+    sections: [
+      {
+        heading: "Categories Enriched over a Monoidal Category",
+        content: [
+          {
+            type: "definition",
+            term: "Enriched Category",
+            body: [
+              { kind: "text", text: "A category " },
+              { kind: "math", latex: "\\mathcal{C}" },
+              { kind: "text", text: " enriched over a monoidal category " },
+              { kind: "math", latex: "(\\mathcal{V}, \\otimes, \\mathbf{1})" },
+              {
+                kind: "text",
+                text: " consists of a collection of objects, hom-objects "
+              },
+              {
+                kind: "math",
+                latex: "\\mathcal{C}(X,Y) \\in \\mathcal{V}"
+              },
+              {
+                kind: "text",
+                text: ", composition morphisms, and identity morphisms satisfying associativity and unit axioms in "
+              },
+              { kind: "math", latex: "\\mathcal{V}" },
+              { kind: "text", text: "." }
+            ]
+          },
+          {
+            type: "math-block",
+            latex: "\\circ_{XYZ} : \\mathcal{C}(Y,Z) \\otimes \\mathcal{C}(X,Y) \\to \\mathcal{C}(X,Z)"
+          }
+        ]
+      },
+      {
+        heading: "Topological and Simplicial Categories",
+        content: [
+          {
+            type: "paragraph",
+            text: "A topologically enriched category (Top-category) has hom-spaces that are topological spaces. A simplicial category (sSet-category) has hom-spaces that are simplicial sets."
+          },
+          {
+            type: "math-block",
+            latex: "\\mathcal{C}(X,Y) \\in \\mathbf{Top} \\quad \\text{or} \\quad \\mathcal{C}(X,Y) \\in \\mathbf{sSet}"
+          },
+          {
+            type: "paragraph",
+            text: "The coherent nerve of a simplicial category is a quasi-category, providing a bridge between the simplicial and quasi-categorical models of (∞, 1)-categories."
+          }
+        ]
+      },
+      {
+        heading: "Comparison of Models",
+        content: [
+          {
+            type: "paragraph",
+            text: "Different models for (∞, 1)-categories — quasi-categories, complete Segal spaces, Segal categories, simplicial categories — are all Quillen equivalent, meaning they present the same homotopy theory."
+          },
+          {
+            type: "math-block",
+            latex: "\\mathbf{qCat} \\simeq \\mathbf{CSS} \\simeq \\mathbf{SegCat} \\simeq \\mathbf{sCat}"
+          },
+          {
+            type: "example",
+            body: [
+              { kind: "text", text: "The nerve of a " },
+              { kind: "math", latex: "\\mathbf{Top}" },
+              { kind: "text", text: "-enriched category " },
+              { kind: "math", latex: "\\mathcal{C}" },
+              {
+                kind: "text",
+                text: " yields a complete Segal space, and its coherent nerve is a quasi-category. These are connected by explicit functors forming a chain of Quillen equivalences."
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: "infinity-toposes",
+    title: "∞-Toposes",
+    subtitle: "Module 8",
+    description: "Lurie's ∞-toposes generalize classical Grothendieck toposes to the higher-categorical setting, unifying homotopy theory and sheaf theory.",
+    estimatedMinutes: 75,
+    sections: [
+      {
+        heading: "From Toposes to ∞-Toposes",
+        content: [
+          {
+            type: "paragraph",
+            text: "A classical Grothendieck topos is a category of sheaves on a site. An ∞-topos is an (∞, 1)-category that looks like the (∞, 1)-category of ∞-groupoid-valued sheaves on some ∞-site."
+          },
+          {
+            type: "definition",
+            term: "∞-Topos",
+            body: [
+              { kind: "text", text: "An " },
+              { kind: "math", latex: "\\infty" },
+              {
+                kind: "text",
+                text: "-topos is an accessible left exact localization of a presheaf (∞, 1)-category "
+              },
+              { kind: "math", latex: "\\mathcal{P}(\\mathcal{C})" },
+              { kind: "text", text: " for some small " },
+              { kind: "math", latex: "(\\infty,1)" },
+              { kind: "text", text: "-category " },
+              { kind: "math", latex: "\\mathcal{C}" },
+              { kind: "text", text: "." }
+            ]
+          },
+          {
+            type: "math-block",
+            latex: "\\mathcal{X} \\hookrightarrow \\mathcal{P}(\\mathcal{C}) = \\mathrm{Fun}(\\mathcal{C}^{\\mathrm{op}}, \\mathcal{S})"
+          }
+        ]
+      },
+      {
+        heading: "The ∞-Category of Spaces",
+        content: [
+          {
+            type: "paragraph",
+            text: "The ∞-category of spaces S is the primordial example of an ∞-topos. Objects are ∞-groupoids (homotopy types), and every ∞-topos is a generalized category of spaces."
+          },
+          {
+            type: "math-block",
+            latex: "\\mathcal{S} = N(\\mathbf{Kan}) \\simeq \\mathrm{L}^H(\\mathbf{sSet}_{\\mathrm{KQ}})"
+          },
+          {
+            type: "paragraph",
+            text: "The universal property: any ∞-topos X has a unique geometric morphism X → S, expressing that ∞-toposes are 'generalized homotopy theories' over the base ∞-topos of spaces."
+          }
+        ]
+      },
+      {
+        heading: "Descent and Object Classifiers",
+        content: [
+          {
+            type: "paragraph",
+            text: "The key characterization of ∞-toposes is the descent property: colimits are 'universal' (stable under pullback), and there exist object classifiers generalizing the subobject classifier of 1-toposes."
+          },
+          {
+            type: "math-block",
+            latex: "\\mathcal{X}_{/X} \\xrightarrow{\\sim} \\mathrm{Fun}(X, \\mathcal{X}) \\quad \\text{(descent)}"
+          },
+          {
+            type: "math-block",
+            latex: "\\mathrm{Map}_{\\mathcal{X}}(X, \\widehat{\\mathcal{S}}) \\simeq \\mathcal{X}_{/X}^{\\mathrm{small}}"
+          },
+          {
+            type: "paragraph",
+            text: "These two properties — descent and object classifiers — together characterize ∞-toposes among presentable (∞, 1)-categories, completing the circle of ideas connecting higher category theory to homotopy-coherent geometry."
           }
         ]
       }

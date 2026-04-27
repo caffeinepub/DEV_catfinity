@@ -1,7 +1,7 @@
-import { c as createLucideIcon, x as useRouter, r as reactExports, j as jsxRuntimeExports, B as Button } from "./index-CiYHczzU.js";
-import { u as useActor, c as createActor } from "./backend-DcBCZdVd.js";
-import { C as CircleAlert } from "./circle-alert-DwaDx3nP.js";
-import { T as Twitter } from "./twitter-gqKVTa7L.js";
+import { c as createLucideIcon, x as useRouter, r as reactExports, j as jsxRuntimeExports, B as Button } from "./index-CUOFokqz.js";
+import { u as useActor, c as createActor } from "./backend-BRVNvjEa.js";
+import { C as CircleAlert } from "./circle-alert-B2mh3J0J.js";
+import { T as Twitter } from "./twitter-zUYqTs3O.js";
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -51,8 +51,7 @@ function OAuthCallbackPage() {
         `[OAuth] Authorization code received: ${code.slice(0, 8)}… (state=${state.slice(0, 8)}…)`
       );
       setStep("clientId");
-      const clientIdResult = await asActor(actor).getClientId();
-      const clientId = clientIdResult.length > 0 ? clientIdResult[0] : null;
+      const clientId = await asActor(actor).getClientId();
       if (!clientId) {
         console.error("[OAuth] Client ID not configured in backend");
         throw new Error(
@@ -201,7 +200,7 @@ function OAuthCallbackPage() {
             step === "error" && /* @__PURE__ */ jsxRuntimeExports.jsx(
               "div",
               {
-                className: "text-sm text-destructive bg-destructive/8 border border-destructive/20 rounded-lg px-4 py-3 text-left leading-relaxed",
+                className: "text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3 text-left leading-relaxed",
                 "data-ocid": "oauth_callback.error_state",
                 children: errorMessage
               }

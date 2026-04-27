@@ -15,7 +15,7 @@ type Step =
   | "error";
 
 interface BackendActor {
-  getClientId: () => Promise<[] | [string]>;
+  getClientId: () => Promise<string | null>;
   exchangeToken: (
     code: string,
     codeVerifier: string,
@@ -78,9 +78,7 @@ export function OAuthCallbackPage() {
 
       // ── Step 2: Fetch Client ID from backend ────────────────────────────
       setStep("clientId");
-      const clientIdResult = await asActor(actor).getClientId();
-      const clientId: string | null =
-        clientIdResult.length > 0 ? (clientIdResult[0] as string) : null;
+      const clientId: string | null = await asActor(actor).getClientId();
 
       if (!clientId) {
         console.error("[OAuth] Client ID not configured in backend");
@@ -266,7 +264,7 @@ export function OAuthCallbackPage() {
         {/* Error details */}
         {step === "error" && (
           <div
-            className="text-sm text-destructive bg-destructive/8 border border-destructive/20 rounded-lg px-4 py-3 text-left leading-relaxed"
+            className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3 text-left leading-relaxed"
             data-ocid="oauth_callback.error_state"
           >
             {errorMessage}

@@ -1,10 +1,10 @@
-import { c as createLucideIcon, r as reactExports, j as jsxRuntimeExports, P as Primitive, a as cn, S as Separator, f as useAuth, B as Button, u as ue } from "./index-CiYHczzU.js";
-import { A as AlertDialog, a as AlertDialogTrigger, b as AlertDialogContent, c as AlertDialogHeader, d as AlertDialogTitle, e as AlertDialogDescription, f as AlertDialogFooter, g as AlertDialogCancel, h as AlertDialogAction } from "./alert-dialog-B3vuaROp.js";
-import { I as Input, a as CircleCheck, B as Badge, u as useOpenAIKey, e as useSetOpenAIKey, C as Clock } from "./useOpenAI-BcSxDSwy.js";
-import { u as useActor, c as createActor } from "./backend-DcBCZdVd.js";
-import { a as useClientId, b as useSetClientId, u as useTokenStatus, c as useDisconnectX } from "./useXToken-BNMkTKjT.js";
-import { T as Twitter } from "./twitter-gqKVTa7L.js";
-import { C as CircleAlert } from "./circle-alert-DwaDx3nP.js";
+import { c as createLucideIcon, r as reactExports, j as jsxRuntimeExports, P as Primitive, a as cn, S as Separator, f as useAuth, B as Button, u as ue } from "./index-CUOFokqz.js";
+import { A as AlertDialog, a as AlertDialogTrigger, b as AlertDialogContent, c as AlertDialogHeader, d as AlertDialogTitle, e as AlertDialogDescription, f as AlertDialogFooter, g as AlertDialogCancel, h as AlertDialogAction } from "./alert-dialog-D6l4m-sM.js";
+import { I as Input, a as CircleCheck, B as Badge, u as useOpenAIKey, e as useSetOpenAIKey, C as Clock } from "./useOpenAI-DfOUgmbt.js";
+import { u as useActor, c as createActor } from "./backend-BRVNvjEa.js";
+import { a as useClientId, b as useSetClientId, u as useTokenStatus, c as useDisconnectX } from "./useXToken-B1coAaYk.js";
+import { T as Twitter } from "./twitter-zUYqTs3O.js";
+import { C as CircleAlert } from "./circle-alert-B2mh3J0J.js";
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -218,8 +218,7 @@ function ClientIdField() {
         setIsVerifying(true);
         try {
           console.log("[OAuth] Re-reading Client ID from backend to verify...");
-          const result = await savedActor.getClientId();
-          const readBack = result ?? null;
+          const readBack = await savedActor.getClientId();
           console.log(
             "[OAuth] Re-read Client ID:",
             readBack ? `${readBack.substring(0, 6)}…` : "null"

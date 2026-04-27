@@ -3,12 +3,7 @@ import Map "mo:core/Map";
 import List "mo:core/List";
 import Time "mo:core/Time";
 import Text "mo:core/Text";
-import Blob "mo:core/Blob";
-import Char "mo:core/Char";
-import Nat "mo:core/Nat";
 import Types "../types/qa";
-import { JSON } "mo:serde-core";
-import Candid "mo:serde-core/Candid";
 
 // openai-client imports
 import ChatApi "mo:openai-client/Apis/ChatApi";
@@ -210,22 +205,25 @@ module {
         functions = null;
       };
 
-      ignore JSON.toText(
-        to_candid(request),
-        [],
-        ?{ Candid.defaultOptions with skip_null_fields = true }
-      );
-      assert false;
-
-      try {
-        let result = await* ChatApi.createChatCompletion(config, request);
-        if (result.choices.size() == 0) {
-          "Error: no choices in response";
-        } else {
-          result.choices[0].message.content;
+      let doRequest = func() : async Text {
+        try {
+          let result = await* ChatApi.createChatCompletion(config, request);
+          if (result.choices.size() == 0) {
+            "Error: no choices in response";
+          } else {
+            result.choices[0].message.content;
+          };
+        } catch (e) {
+          "OPENAI_RAW: " # e.message();
         };
-      } catch (e) {
-        "OPENAI_RAW: " # e.message();
+      };
+
+      // Retry once on timeout
+      let firstResult = await doRequest();
+      if (firstResult.startsWith(#text "OPENAI_RAW: ") and firstResult.contains(#text "timed out")) {
+        await doRequest();
+      } else {
+        firstResult;
       };
     } else {
       // ── hand-rolled IC.http_request fallback path ──
@@ -281,10 +279,10 @@ module {
           try {
             await doRequest();
           } catch (e2) {
-            "Request failed: " # e2.message();
+            "OPENAI_RAW: " # e2.message();
           };
         } else {
-          "Request failed: " # e.message();
+          "OPENAI_RAW: " # e.message();
         };
       };
     };
