@@ -2,20 +2,27 @@
 import Map "mo:core/Map";
 import List "mo:core/List";
 import Time "mo:core/Time";
-import Error "mo:core/Error";
 import Text "mo:core/Text";
 import Blob "mo:core/Blob";
 import Char "mo:core/Char";
 import Nat "mo:core/Nat";
-import Iter "mo:core/Iter";
 import Types "../types/qa";
+
+// openai-client imports
+import ChatApi "mo:openai-client/Apis/ChatApi";
+import OpenAIConfig "mo:openai-client/Config";
+import CreateChatCompletionRequest "mo:openai-client/Models/CreateChatCompletionRequest";
 
 module {
   public type QA = Types.QA;
   public type QALessonMap = Types.QALessonMap;
   public type QAGlobalMap = Types.QAGlobalMap;
 
-  // ── JSON helpers ─────────────────────────────────────────────────────────
+  // ── Feature flag ─────────────────────────────────────────────────────────
+  // Set to false to fall back to the hand-rolled IC.http_request path.
+  let USE_OPENAI_CLIENT = true;
+
+  // ── JSON helpers (kept for the fallback path) ─────────────────────────────
 
   /// Escape a Text value for embedding in a JSON string literal.
   func escapeJson(s : Text) : Text {
@@ -108,7 +115,7 @@ module {
     };
   };
 
-  // ── IC management canister types ─────────────────────────────────────────
+  // ── IC management canister types (fallback path) ──────────────────────────
 
   type HttpHeader = { name : Text; value : Text };
   type HttpRequestArgs = {
@@ -131,7 +138,9 @@ module {
 
   // ── OpenAI call ──────────────────────────────────────────────────────────
 
-  /// Call OpenAI ChatCompletion directly via IC http_request (bypasses openai-client package bug).
+  /// Call OpenAI ChatCompletion.
+  /// Primary path: mo:openai-client ChatApi.createChatCompletion (USE_OPENAI_CLIENT = true).
+  /// Fallback path: hand-rolled IC.http_request shim (USE_OPENAI_CLIENT = false).
   /// Returns the assistant message text on success, or an error string on failure (never traps).
   /// transformFn is passed from the actor so the IC can strip non-deterministic headers.
   func callOpenAI(
@@ -140,62 +149,134 @@ module {
     userApiKey : Text,
     transformFn : shared query ({ response : { status : Nat; headers : [HttpHeader]; body : Blob }; context : Blob }) -> async { status : Nat; headers : [HttpHeader]; body : Blob },
   ) : async Text {
-    let body = "{\"model\":\"gpt-4o-mini\",\"messages\":[{\"role\":\"system\",\"content\":\""
-      # escapeJson(systemPrompt)
-      # "\"},{\"role\":\"user\",\"content\":\""
-      # escapeJson(userMessage)
-      # "\"}],\"max_tokens\":512}";
-    let bodyBytes = body.encodeUtf8();
-
-    let doRequest = func() : async Text {
-      let response = await (with cycles = 50_000_000_000) IC.http_request({
-        url = "https://api.openai.com/v1/chat/completions";
+    if (USE_OPENAI_CLIENT) {
+      // ── openai-client path ──
+      let config : OpenAIConfig.Config = {
+        OpenAIConfig.defaultConfig with
+        auth = ?#bearer(userApiKey);
         max_response_bytes = ?50_000;
-        method = #post;
-        headers = [
-          { name = "Content-Type"; value = "application/json" },
-          { name = "Authorization"; value = "Bearer " # userApiKey },
-        ];
-        body = ?bodyBytes;
         transform = ?{
           function = transformFn;
           context = "" : Blob;
         };
         is_replicated = ?false;
-      });
-      if (response.status == 200) {
-        let responseText = switch (response.body.decodeUtf8()) {
-          case (?t) t;
-          case null "Error: could not decode response";
-        };
-        extractOpenAIContent(responseText);
-      } else {
-        let statusStr = response.status.toText();
-        let bodyPreview = switch (response.body.decodeUtf8()) {
-          case (?t) {
-            if (t.size() > 200) {
-              let iter = t.chars();
-              let truncated = iter.take(200);
-              Text.fromIter(truncated);
-            } else t;
-          };
-          case null "no body";
-        };
-        "OpenAI returned " # statusStr # ": " # bodyPreview;
+        cycles = 50_000_000_000;
       };
-    };
 
-    try {
-      await doRequest();
-    } catch (e) {
-      if (e.message().contains(#text "timed out")) {
-        try {
-          await doRequest();
-        } catch (e2) {
-          "Request failed: " # e2.message();
+      let request : CreateChatCompletionRequest.CreateChatCompletionRequest = {
+        model = "gpt-4o-mini";
+        messages = [
+          #ChatCompletionRequestSystemMessage({
+            content = #one_of_0(systemPrompt);
+            role = #system_;
+            name = null;
+          }),
+          #ChatCompletionRequestUserMessage({
+            content = #one_of_0(userMessage);
+            role = #user;
+            name = null;
+          }),
+        ];
+        max_tokens = ?512;
+        metadata = null;
+        temperature = null;
+        top_p = null;
+        user = null;
+        service_tier = null;
+        modalities = null;
+        reasoning_effort = null;
+        max_completion_tokens = null;
+        frequency_penalty = null;
+        presence_penalty = null;
+        web_search_options = null;
+        top_logprobs = null;
+        response_format = null;
+        audio = null;
+        store = null;
+        stream = null;
+        stop = null;
+        logit_bias = null;
+        logprobs = null;
+        n = null;
+        prediction = null;
+        seed = null;
+        stream_options = null;
+        tools = null;
+        tool_choice = null;
+        parallel_tool_calls = null;
+        function_call = null;
+        functions = null;
+      };
+
+      try {
+        let result = await* ChatApi.createChatCompletion(config, request);
+        if (result.choices.size() == 0) {
+          "Error: no choices in response";
+        } else {
+          result.choices[0].message.content;
         };
-      } else {
-        "Request failed: " # e.message();
+      } catch (e) {
+        e.message();
+      };
+    } else {
+      // ── hand-rolled IC.http_request fallback path ──
+      let body = "{\"model\":\"gpt-4o-mini\",\"messages\":[{\"role\":\"system\",\"content\":\""
+        # escapeJson(systemPrompt)
+        # "\"},{\"role\":\"user\",\"content\":\""
+        # escapeJson(userMessage)
+        # "\"}],\"max_tokens\":512}";
+      let bodyBytes = body.encodeUtf8();
+
+      let doRequest = func() : async Text {
+        let response = await (with cycles = 50_000_000_000) IC.http_request({
+          url = "https://api.openai.com/v1/chat/completions";
+          max_response_bytes = ?50_000;
+          method = #post;
+          headers = [
+            { name = "Content-Type"; value = "application/json" },
+            { name = "Authorization"; value = "Bearer " # userApiKey },
+          ];
+          body = ?bodyBytes;
+          transform = ?{
+            function = transformFn;
+            context = "" : Blob;
+          };
+          is_replicated = ?false;
+        });
+        if (response.status == 200) {
+          let responseText = switch (response.body.decodeUtf8()) {
+            case (?t) t;
+            case null "Error: could not decode response";
+          };
+          extractOpenAIContent(responseText);
+        } else {
+          let statusStr = response.status.toText();
+          let bodyPreview = switch (response.body.decodeUtf8()) {
+            case (?t) {
+              if (t.size() > 200) {
+                let iter = t.chars();
+                let truncated = iter.take(200);
+                Text.fromIter(truncated);
+              } else t;
+            };
+            case null "no body";
+          };
+          "OpenAI returned " # statusStr # ": " # bodyPreview;
+        };
+      };
+
+      try {
+        await doRequest();
+      } catch (e) {
+        if (e.message().contains(#text "timed out")) {
+          try {
+            await doRequest();
+          } catch (e2) {
+            "Request failed: " # e2.message();
+          };
+        } else {
+          "Request failed: " # e.message();
+        };
       };
     };
   };
