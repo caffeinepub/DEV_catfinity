@@ -163,13 +163,13 @@ module {
       let request : CreateChatCompletionRequest.CreateChatCompletionRequest = {
         model = "gpt-4o-mini";
         messages = [
-          #ChatCompletionRequestSystemMessage({
-            content = #one_of_0(systemPrompt);
+          #system_({
+            content = #string(systemPrompt);
             role = #system_;
             name = null;
           }),
-          #ChatCompletionRequestUserMessage({
-            content = #one_of_0(userMessage);
+          #user({
+            content = #string(userMessage);
             role = #user;
             name = null;
           }),
