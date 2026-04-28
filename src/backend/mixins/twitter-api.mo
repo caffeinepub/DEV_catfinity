@@ -320,6 +320,7 @@ mixin (
       };
       #ok("Tweet posted successfully! Tweet ID: " # tweetId);
     } catch (e) {
+      Debug.print("RAW reject: " # e.message());
       let msg = e.message();
       // On 401/403 attempt one token refresh and retry
       if (msg.contains(#text "HTTP 401") or msg.contains(#text "HTTP 403")) {
