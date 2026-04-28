@@ -15,129 +15,13 @@ module {
   public type QALessonMap = Types.QALessonMap;
   public type QAGlobalMap = Types.QAGlobalMap;
 
-  // ── Feature flag ─────────────────────────────────────────────────────────
-  // Set to false to fall back to the hand-rolled IC.http_request path.
-  let USE_OPENAI_CLIENT = true;
-
-  // ── JSON helpers (kept for the fallback path) ─────────────────────────────
-
-  /// Escape a Text value for embedding in a JSON string literal.
-  func escapeJson(s : Text) : Text {
-    var result = "";
-    for (c in s.chars()) {
-      if (c == '\\') {
-        result #= "\\\\";
-      } else if (c.toText() == "\"") {
-        result #= "\\\"";
-      } else if (c == '\n') {
-        result #= "\\n";
-      } else if (c == '\r') {
-        result #= "\\r";
-      } else {
-        result #= c.toText();
-      };
-    };
-    result;
-  };
-
-  /// Minimal extraction of choices[0].message.content from OpenAI chat response JSON.
-  /// Finds the first "content": after "message": and extracts the string value.
-  func extractOpenAIContent(json : Text) : Text {
-    // Find "message": then "content":
-    let msgNeedle = "\"message\":";
-    let msgParts = json.split(#text msgNeedle);
-    var afterMessage : ?Text = null;
-    var first = true;
-    for (part in msgParts) {
-      if (not first and afterMessage == null) {
-        afterMessage := ?part;
-      };
-      first := false;
-    };
-    let msgRest = switch (afterMessage) {
-      case (?r) r;
-      case null { return "Error: could not find message in response" };
-    };
-
-    let contentNeedle = "\"content\":";
-    let contentParts = msgRest.split(#text contentNeedle);
-    var afterContent : ?Text = null;
-    first := true;
-    for (part in contentParts) {
-      if (not first and afterContent == null) {
-        afterContent := ?part;
-      };
-      first := false;
-    };
-    let contentRest = switch (afterContent) {
-      case (?r) r;
-      case null { return "Error: could not find content in response" };
-    };
-
-    // contentRest starts with optional whitespace then either `"` (string) or `null`
-    let trimmed = contentRest.trimStart(#char ' ');
-    switch (trimmed.stripStart(#text "\"")) {
-      case (?inner) {
-        // Read characters until unescaped closing quote
-        var result = "";
-        var escaped = false;
-        var done = false;
-        for (c in inner.chars()) {
-          if (done) {
-            // skip remaining
-          } else if (escaped) {
-            if (c.toText() == "\"") {
-              result #= "\"";
-            } else if (c == '\\') {
-              result #= "\\";
-            } else if (c == 'n') {
-              result #= "\n";
-            } else if (c == 'r') {
-              result #= "\r";
-            } else {
-              result #= c.toText();
-            };
-            escaped := false;
-          } else if (c == '\\') {
-            escaped := true;
-          } else if (c.toText() == "\"") {
-            done := true;
-          } else {
-            result #= c.toText();
-          };
-        };
-        result;
-      };
-      case null "Error: content is not a string";
-    };
-  };
-
-  // ── IC management canister types (fallback path) ──────────────────────────
+  // ── IC management canister types (used in transformFn signature) ──────────
 
   type HttpHeader = { name : Text; value : Text };
-  type HttpRequestArgs = {
-    url : Text;
-    max_response_bytes : ?Nat64;
-    method : { #get; #head; #post };
-    headers : [HttpHeader];
-    body : ?Blob;
-    transform : ?{
-      function : shared query ({ response : { status : Nat; headers : [HttpHeader]; body : Blob }; context : Blob }) -> async { status : Nat; headers : [HttpHeader]; body : Blob };
-      context : Blob;
-    };
-    is_replicated : ?Bool;
-  };
-  type HttpResponse = { status : Nat; headers : [HttpHeader]; body : Blob };
-
-  let IC = actor "aaaaa-aa" : actor {
-    http_request : (HttpRequestArgs) -> async HttpResponse;
-  };
 
   // ── OpenAI call ──────────────────────────────────────────────────────────
 
-  /// Call OpenAI ChatCompletion.
-  /// Primary path: mo:openai-client ChatApi.createChatCompletion (USE_OPENAI_CLIENT = true).
-  /// Fallback path: hand-rolled IC.http_request shim (USE_OPENAI_CLIENT = false).
+  /// Call OpenAI ChatCompletion via mo:openai-client.
   /// Returns the assistant message text on success, or an error string on failure (never traps).
   /// transformFn is passed from the actor so the IC can strip non-deterministic headers.
   func callOpenAI(
@@ -146,145 +30,82 @@ module {
     userApiKey : Text,
     transformFn : shared query ({ response : { status : Nat; headers : [HttpHeader]; body : Blob }; context : Blob }) -> async { status : Nat; headers : [HttpHeader]; body : Blob },
   ) : async Text {
-    if (USE_OPENAI_CLIENT) {
-      // ── openai-client path ──
-      let config : OpenAIConfig.Config = {
-        OpenAIConfig.defaultConfig with
-        auth = ?#bearer(userApiKey);
-        max_response_bytes = ?50_000;
-        transform = ?{
-          function = transformFn;
-          context = "" : Blob;
-        };
-        is_replicated = ?false;
-        cycles = 50_000_000_000;
+    let config : OpenAIConfig.Config = {
+      OpenAIConfig.defaultConfig with
+      auth = ?#bearer(userApiKey);
+      max_response_bytes = ?50_000;
+      transform = ?{
+        function = transformFn;
+        context = "" : Blob;
       };
+      is_replicated = ?false;
+      cycles = 50_000_000_000;
+    };
 
-      let request : CreateChatCompletionRequest.CreateChatCompletionRequest = {
-        model = "gpt-4o-mini";
-        messages = [
-          #system_({
-            content = #string(systemPrompt);
-            role = #system_;
-            name = null;
-          }),
-          #user({
-            content = #string(userMessage);
-            role = #user;
-            name = null;
-          }),
-        ];
-        max_tokens = ?512;
-        metadata = null;
-        temperature = null;
-        top_p = null;
-        user = null;
-        service_tier = null;
-        modalities = null;
-        reasoning_effort = null;
-        max_completion_tokens = null;
-        frequency_penalty = null;
-        presence_penalty = null;
-        web_search_options = null;
-        top_logprobs = null;
-        response_format = null;
-        audio = null;
-        store = null;
-        stream = null;
-        stop = null;
-        logit_bias = null;
-        logprobs = null;
-        n = null;
-        prediction = null;
-        seed = null;
-        stream_options = null;
-        tools = null;
-        tool_choice = null;
-        parallel_tool_calls = null;
-        function_call = null;
-        functions = null;
-      };
+    let request : CreateChatCompletionRequest.CreateChatCompletionRequest = {
+      model = "gpt-4o-mini";
+      messages = [
+        #system_({
+          content = #string(systemPrompt);
+          role = #system_;
+          name = null;
+        }),
+        #user({
+          content = #string(userMessage);
+          role = #user;
+          name = null;
+        }),
+      ];
+      max_tokens = ?512;
+      metadata = null;
+      temperature = null;
+      top_p = null;
+      user = null;
+      service_tier = null;
+      modalities = null;
+      reasoning_effort = null;
+      max_completion_tokens = null;
+      frequency_penalty = null;
+      presence_penalty = null;
+      web_search_options = null;
+      top_logprobs = null;
+      response_format = null;
+      audio = null;
+      store = null;
+      stream = null;
+      stop = null;
+      logit_bias = null;
+      logprobs = null;
+      n = null;
+      prediction = null;
+      seed = null;
+      stream_options = null;
+      tools = null;
+      tool_choice = null;
+      parallel_tool_calls = null;
+      function_call = null;
+      functions = null;
+    };
 
-      let doRequest = func() : async Text {
-        try {
-          let result = await* ChatApi.createChatCompletion(config, request);
-          if (result.choices.size() == 0) {
-            "Error: no choices in response";
-          } else {
-            result.choices[0].message.content;
-          };
-        } catch (e) {
-          "OPENAI_RAW: " # e.message();
-        };
-      };
-
-      // Retry once on timeout
-      let firstResult = await doRequest();
-      if (firstResult.startsWith(#text "OPENAI_RAW: ") and firstResult.contains(#text "timed out")) {
-        await doRequest();
-      } else {
-        firstResult;
-      };
-    } else {
-      // ── hand-rolled IC.http_request fallback path ──
-      let body = "{\"model\":\"gpt-4o-mini\",\"messages\":[{\"role\":\"system\",\"content\":\""
-        # escapeJson(systemPrompt)
-        # "\"},{\"role\":\"user\",\"content\":\""
-        # escapeJson(userMessage)
-        # "\"}],\"max_tokens\":512}";
-      let bodyBytes = body.encodeUtf8();
-
-      let doRequest = func() : async Text {
-        let response = await (with cycles = 50_000_000_000) IC.http_request({
-          url = "https://api.openai.com/v1/chat/completions";
-          max_response_bytes = ?50_000;
-          method = #post;
-          headers = [
-            { name = "Content-Type"; value = "application/json" },
-            { name = "Authorization"; value = "Bearer " # userApiKey },
-          ];
-          body = ?bodyBytes;
-          transform = ?{
-            function = transformFn;
-            context = "" : Blob;
-          };
-          is_replicated = ?false;
-        });
-        if (response.status == 200) {
-          let responseText = switch (response.body.decodeUtf8()) {
-            case (?t) t;
-            case null "Error: could not decode response";
-          };
-          extractOpenAIContent(responseText);
-        } else {
-          let statusStr = response.status.toText();
-          let bodyPreview = switch (response.body.decodeUtf8()) {
-            case (?t) {
-              if (t.size() > 200) {
-                let iter = t.chars();
-                let truncated = iter.take(200);
-                Text.fromIter(truncated);
-              } else t;
-            };
-            case null "no body";
-          };
-          "OpenAI returned " # statusStr # ": " # bodyPreview;
-        };
-      };
-
+    let doRequest = func() : async Text {
       try {
-        await doRequest();
-      } catch (e) {
-        if (e.message().contains(#text "timed out")) {
-          try {
-            await doRequest();
-          } catch (e2) {
-            "OPENAI_RAW: " # e2.message();
-          };
+        let result = await* ChatApi.createChatCompletion(config, request);
+        if (result.choices.size() == 0) {
+          "Error: no choices in response";
         } else {
-          "OPENAI_RAW: " # e.message();
+          result.choices[0].message.content;
         };
+      } catch (e) {
+        "OPENAI_RAW: " # e.message();
       };
+    };
+
+    // Retry once on timeout
+    let firstResult = await doRequest();
+    if (firstResult.startsWith(#text "OPENAI_RAW: ") and firstResult.contains(#text "timed out")) {
+      await doRequest();
+    } else {
+      firstResult;
     };
   };
 
