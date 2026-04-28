@@ -93,7 +93,10 @@ module {
         if (result.choices.size() == 0) {
           "Error: no choices in response";
         } else {
-          result.choices[0].message.content;
+          switch (result.choices[0].message.content) {
+            case (?text) text;
+            case null "Error: empty content in response";
+          };
         };
       } catch (e) {
         "OPENAI_RAW: " # e.message();
