@@ -4,7 +4,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, MessageCircleQuestion, Send } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import ReactMarkdown from "react-markdown";
+import rehypeKatex from "rehype-katex";
+import remarkMath from "remark-math";
 import {
   useAskQuestion,
   useGetQAHistory,
@@ -18,166 +20,16 @@ interface QAPanelProps {
   lessonName?: string;
 }
 
-/** Apply inline bold, italic, and code transforms to a plain text segment */
-function renderInline(text: string): ReactNode[] {
-  const parts: ReactNode[] = [];
-  // Matches **bold**, *italic*, `code`
-  const pattern = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`)/g;
-  let last = 0;
-  let start: number;
-  let matched: string;
-  let b: string | undefined;
-  let it: string | undefined;
-  let c: string | undefined;
-
-  // Use exec loop without assignment-in-expression
-  const execNext = (): RegExpExecArray | null => pattern.exec(text);
-  let m = execNext();
-  while (m !== null) {
-    start = m.index;
-    matched = m[0];
-    b = m[2];
-    it = m[3];
-    c = m[4];
-
-    if (start > last) {
-      parts.push(text.slice(last, start));
-    }
-
-    if (matched.startsWith("**") && b) {
-      parts.push(<strong key={start}>{b}</strong>);
-    } else if (matched.startsWith("*") && it) {
-      parts.push(<em key={start}>{it}</em>);
-    } else if (c) {
-      parts.push(
-        <code
-          key={start}
-          className="bg-muted rounded px-1 py-0.5 text-xs font-mono"
-        >
-          {c}
-        </code>,
-      );
-    }
-    last = start + matched.length;
-    m = execNext();
-  }
-  if (last < text.length) parts.push(text.slice(last));
-  return parts;
-}
-
-/** Minimal markdown renderer — handles headers, bullets, numbered lists, blank lines, inline styles */
-function renderMarkdown(text: string): ReactNode {
-  const lines = text.split("\n");
-  const nodes: ReactNode[] = [];
-  let bulletBuffer: string[] = [];
-  let numberedBuffer: string[] = [];
-
-  const flushBullets = (key: string) => {
-    if (bulletBuffer.length === 0) return;
-    nodes.push(
-      <ul key={key} className="list-disc list-inside space-y-0.5 mb-2 text-sm">
-        {bulletBuffer.map((item, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: stable list
-          <li key={i}>{renderInline(item)}</li>
-        ))}
-      </ul>,
-    );
-    bulletBuffer = [];
-  };
-
-  const flushNumbered = (key: string) => {
-    if (numberedBuffer.length === 0) return;
-    nodes.push(
-      <ol
-        key={key}
-        className="list-decimal list-inside space-y-0.5 mb-2 text-sm"
-      >
-        {numberedBuffer.map((item, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: stable list
-          <li key={i}>{renderInline(item)}</li>
-        ))}
-      </ol>,
-    );
-    numberedBuffer = [];
-  };
-
-  lines.forEach((line, i) => {
-    const key = `line-${i}`;
-
-    // H1 → h3
-    if (line.startsWith("# ")) {
-      flushBullets(`${key}-bu`);
-      flushNumbered(`${key}-nu`);
-      nodes.push(
-        <h3
-          key={key}
-          className="font-display font-semibold text-base mt-3 mb-1"
-        >
-          {renderInline(line.slice(2))}
-        </h3>,
-      );
-      return;
-    }
-
-    // H2 → h4
-    if (line.startsWith("## ")) {
-      flushBullets(`${key}-bu`);
-      flushNumbered(`${key}-nu`);
-      nodes.push(
-        <h4 key={key} className="font-display font-semibold text-sm mt-2 mb-1">
-          {renderInline(line.slice(3))}
-        </h4>,
-      );
-      return;
-    }
-
-    // Bullet list
-    if (line.startsWith("- ") || line.startsWith("* ")) {
-      flushNumbered(`${key}-nu`);
-      bulletBuffer.push(line.slice(2));
-      return;
-    }
-
-    // Numbered list: "1. ", "2. " etc.
-    if (/^\d+\.\s/.test(line)) {
-      flushBullets(`${key}-bu`);
-      numberedBuffer.push(line.replace(/^\d+\.\s/, ""));
-      return;
-    }
-
-    // Flush any open lists before non-list content
-    flushBullets(`${key}-bu`);
-    flushNumbered(`${key}-nu`);
-
-    // Blank line
-    if (line.trim() === "") {
-      nodes.push(<br key={key} />);
-      return;
-    }
-
-    // Plain paragraph line
-    nodes.push(
-      <p key={key} className="mb-1 leading-relaxed text-sm">
-        {renderInline(line)}
-      </p>,
-    );
-  });
-
-  // Flush any trailing lists
-  flushBullets("final-bu");
-  flushNumbered("final-nu");
-
-  return <>{nodes}</>;
-}
-
 function QAEntry({
   question,
   response,
   at,
+  defaultOpen,
 }: {
   question: string;
   response: string;
   at: bigint;
+  defaultOpen?: boolean;
 }) {
   const timestamp = new Date(Number(at / 1_000_000n)).toLocaleString("en-US", {
     month: "short",
@@ -187,19 +39,44 @@ function QAEntry({
   });
 
   return (
-    <div className="space-y-2 py-4 border-b border-border last:border-0">
-      <div className="flex items-start justify-between gap-3">
-        <p className="font-body font-semibold text-sm text-foreground leading-snug">
-          {question}
-        </p>
+    <details
+      open={defaultOpen}
+      className="group py-3 border-b border-border last:border-0 cursor-pointer"
+    >
+      <summary className="flex items-start justify-between gap-3 list-none select-none marker:hidden">
+        <span className="flex items-start gap-2 min-w-0">
+          {/* Chevron indicator */}
+          <svg
+            className="w-3.5 h-3.5 shrink-0 mt-0.5 text-muted-foreground transition-transform duration-200 group-open:rotate-90"
+            viewBox="0 0 12 12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 2l4 4-4 4" />
+          </svg>
+          <p className="font-body font-semibold text-sm text-foreground leading-snug">
+            {question}
+          </p>
+        </span>
         <time className="text-xs text-muted-foreground font-mono shrink-0 mt-0.5">
           {timestamp}
         </time>
+      </summary>
+
+      {/* Answer — rendered markdown + LaTeX */}
+      <div className="mt-3 pl-5 text-muted-foreground font-body text-sm leading-relaxed prose prose-sm max-w-none dark:prose-invert prose-headings:font-display prose-headings:text-foreground prose-code:bg-muted prose-code:rounded prose-code:px-1 prose-code:py-0.5 prose-code:text-xs prose-pre:bg-muted prose-pre:rounded-lg">
+        <ReactMarkdown
+          remarkPlugins={[remarkMath]}
+          rehypePlugins={[rehypeKatex]}
+        >
+          {response}
+        </ReactMarkdown>
       </div>
-      <div className="text-muted-foreground font-body">
-        {renderMarkdown(response)}
-      </div>
-    </div>
+    </details>
   );
 }
 
@@ -378,7 +255,7 @@ export function QAPanel({ lessonId, lessonName }: QAPanelProps) {
         </div>
       ) : history && history.length > 0 ? (
         <div
-          className="divide-y divide-border rounded-lg border border-border bg-muted/20 px-4 overflow-hidden"
+          className="rounded-lg border border-border bg-muted/20 px-4 overflow-hidden"
           data-ocid="qa_panel.history_list"
         >
           {history.map((entry, idx) => (
@@ -390,6 +267,7 @@ export function QAPanel({ lessonId, lessonName }: QAPanelProps) {
                 question={entry.question}
                 response={entry.response}
                 at={entry.at}
+                defaultOpen={idx === history.length - 1}
               />
             </div>
           ))}
