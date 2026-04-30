@@ -264,10 +264,8 @@ mixin (
       if (tokens.refreshToken == "") {
         return #err("Access token expired and no refresh token available. Please reconnect your X account.");
       };
-      let refreshed = await* refreshAccessToken(caller, tokens.refreshToken);
-      if (not refreshed) {
-        return #err("Failed to refresh X access token. Please reconnect your X account.");
-      };
+      let true = await* refreshAccessToken(caller, tokens.refreshToken)
+        else return #err("Failed to refresh X access token. Please reconnect your X account.");
       let ?refreshedTokens = TwitterLib.getTokens(tokenMap, caller)
         else return #err("Token refresh succeeded but tokens missing. Please reconnect your X account.");
       tokens := refreshedTokens;
