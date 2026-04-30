@@ -1,6 +1,6 @@
-import { c as createLucideIcon, j as jsxRuntimeExports, a as cn, b as commonjsGlobal, g as getDefaultExportFromCjs, r as reactExports, B as Button, L as Link, e as useQueryClient } from "./index-C0tN0U_T.js";
-import { u as useOpenAIKey, b as useGetQAHistory, c as useAskQuestion, I as Input, d as useMutation } from "./useOpenAI-SYY3ZfFV.js";
-import { u as useActor, a as useQuery, c as createActor } from "./backend-C-R7NMV0.js";
+import { c as createLucideIcon, j as jsxRuntimeExports, a as cn, b as commonjsGlobal, g as getDefaultExportFromCjs, r as reactExports, B as Button, L as Link, e as useQueryClient } from "./index-DIRG9iEK.js";
+import { u as useOpenAIKey, b as useGetQAHistory, c as useAskQuestion, I as Input, d as useMutation } from "./useOpenAI-x4LxQfxt.js";
+import { u as useActor, a as useQuery, c as createActor } from "./backend-E_IeS8oG.js";
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -26195,12 +26195,12 @@ function useProgress() {
         console.log(
           "[Progress] completedAt raw:",
           item.completedAt,
-          "converted:",
-          Number(item.completedAt)
+          "converted ms:",
+          Number(item.completedAt / 1000000n)
         );
         return {
           lessonId: item.lessonId,
-          completedAt: Number(item.completedAt)
+          completedAt: Number(item.completedAt / 1000000n)
         };
       });
     },

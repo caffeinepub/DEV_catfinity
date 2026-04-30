@@ -29,12 +29,12 @@ export function useProgress() {
         console.log(
           "[Progress] completedAt raw:",
           item.completedAt,
-          "converted:",
-          Number(item.completedAt),
+          "converted ms:",
+          Number(item.completedAt / 1_000_000n),
         );
         return {
           lessonId: item.lessonId,
-          completedAt: Number(item.completedAt),
+          completedAt: Number(item.completedAt / 1_000_000n),
         };
       });
     },
