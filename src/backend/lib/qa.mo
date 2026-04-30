@@ -42,50 +42,13 @@ module {
       cycles = 50_000_000_000;
     };
 
-    let request : CreateChatCompletionRequest.CreateChatCompletionRequest = {
+    let request = { CreateChatCompletionRequest.JSON.init {
       model = "gpt-4o-mini";
       messages = [
-        #system_({
-          content = #string(systemPrompt);
-          role = #system_;
-          name = null;
-        }),
-        #user({
-          content = #string(userMessage);
-          role = #user;
-          name = null;
-        }),
+        #system_({ content = #string(systemPrompt); role = #system_; name = null }),
+        #user({ content = #string(userMessage); role = #user; name = null }),
       ];
-      max_tokens = ?512;
-      metadata = null;
-      temperature = null;
-      top_p = null;
-      user = null;
-      service_tier = null;
-      modalities = null;
-      reasoning_effort = null;
-      max_completion_tokens = null;
-      frequency_penalty = null;
-      presence_penalty = null;
-      web_search_options = null;
-      top_logprobs = null;
-      response_format = null;
-      audio = null;
-      store = null;
-      stream = null;
-      stop = null;
-      logit_bias = null;
-      logprobs = null;
-      n = null;
-      prediction = null;
-      seed = null;
-      stream_options = null;
-      tools = null;
-      tool_choice = null;
-      parallel_tool_calls = null;
-      function_call = null;
-      functions = null;
-    };
+    } with max_tokens = ?512 };
 
     let doRequest = func() : async Text {
       try {

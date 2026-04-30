@@ -11,7 +11,7 @@ import TwitterLib "../lib/twitter";
 import Types "../types/twitter";
 import XConfig "mo:x-client/Config";
 import TweetsApi "mo:x-client/Apis/TweetsApi";
-import { type TweetCreateRequest } "mo:x-client/Models/TweetCreateRequest";
+import TweetCreateRequest "mo:x-client/Models/TweetCreateRequest";
 
 mixin (
   tokenMap : TwitterLib.TokenMap,
@@ -293,24 +293,7 @@ mixin (
     };
 
     // Build TweetCreateRequest — only text_ is needed; all other fields are null
-    let tweetReq : TweetCreateRequest = {
-      card_uri = null;
-      community_id = null;
-      direct_message_deep_link = null;
-      edit_options = null;
-      for_super_followers_only = null;
-      geo = null;
-      made_with_ai = null;
-      media = null;
-      nullcast = null;
-      paid_partnership = null;
-      poll = null;
-      quote_tweet_id = null;
-      reply = null;
-      reply_settings = null;
-      share_with_followers = null;
-      text_ = ?tweetText;
-    };
+    let tweetReq = { TweetCreateRequest.JSON.init {} with text_ = ?tweetText };
 
     try {
       let response = await* TweetsApi.createPosts(tweetConfig, tweetReq);
