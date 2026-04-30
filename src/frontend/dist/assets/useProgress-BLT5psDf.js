@@ -1,6 +1,6 @@
-import { c as createLucideIcon, j as jsxRuntimeExports, a as cn, b as commonjsGlobal, g as getDefaultExportFromCjs, r as reactExports, B as Button, L as Link, e as useQueryClient } from "./index-D83KEM3y.js";
-import { u as useOpenAIKey, b as useGetQAHistory, c as useAskQuestion, I as Input, d as useMutation } from "./useOpenAI-CqVUYGBc.js";
-import { u as useActor, a as useQuery, c as createActor } from "./backend-CMYt4sAY.js";
+import { c as createLucideIcon, j as jsxRuntimeExports, a as cn, b as commonjsGlobal, g as getDefaultExportFromCjs, r as reactExports, B as Button, L as Link, e as useQueryClient } from "./index-C0tN0U_T.js";
+import { u as useOpenAIKey, b as useGetQAHistory, c as useAskQuestion, I as Input, d as useMutation } from "./useOpenAI-SYY3ZfFV.js";
+import { u as useActor, a as useQuery, c as createActor } from "./backend-C-R7NMV0.js";
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -26191,10 +26191,18 @@ function useProgress() {
     queryFn: async () => {
       if (!actor) return [];
       const raw = await asActor(actor).getProgress();
-      return raw.map((item) => ({
-        lessonId: item.lessonId,
-        completedAt: Number(item.completedAt)
-      }));
+      return raw.map((item) => {
+        console.log(
+          "[Progress] completedAt raw:",
+          item.completedAt,
+          "converted:",
+          Number(item.completedAt)
+        );
+        return {
+          lessonId: item.lessonId,
+          completedAt: Number(item.completedAt)
+        };
+      });
     },
     enabled: !!actor,
     retry: 3,

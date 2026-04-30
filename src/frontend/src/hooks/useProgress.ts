@@ -25,10 +25,18 @@ export function useProgress() {
     queryFn: async () => {
       if (!actor) return [];
       const raw = await asActor(actor).getProgress();
-      return raw.map((item) => ({
-        lessonId: item.lessonId,
-        completedAt: Number(item.completedAt),
-      }));
+      return raw.map((item) => {
+        console.log(
+          "[Progress] completedAt raw:",
+          item.completedAt,
+          "converted:",
+          Number(item.completedAt),
+        );
+        return {
+          lessonId: item.lessonId,
+          completedAt: Number(item.completedAt),
+        };
+      });
     },
     enabled: !!actor,
     retry: 3,
