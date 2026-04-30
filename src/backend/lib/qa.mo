@@ -32,14 +32,14 @@ module {
   // ── OpenAI call ──────────────────────────────────────────────────────────
 
   /// Call OpenAI ChatCompletion via mo:openai-client.
-  /// Returns the assistant message text on success, or an error string on failure (never traps).
+  /// Returns #ok(text) on success, or #err(message) on failure (never traps).
   /// transformFn is passed from the actor so the IC can strip non-deterministic headers.
   func callOpenAI(
     systemPrompt : Text,
     userMessage : Text,
     userApiKey : Text,
     transformFn : TransformFn,
-  ) : async Text {
+  ) : async { #ok : Text; #err : Text } {
     let config : OpenAIConfig.Config = {
       OpenAIConfig.defaultConfig with
       auth = ?#bearer(userApiKey);
@@ -60,28 +60,33 @@ module {
       ];
     } with max_tokens = ?512 };
 
-    let doRequest = func() : async Text {
+    let doRequest = func() : async { #ok : Text; #err : Text } {
       try {
         let result = await* ChatApi.createChatCompletion(config, request);
         if (result.choices.size() == 0) {
-          "Error: no choices in response";
+          #err("no choices in response");
         } else {
           switch (result.choices[0].message.content) {
-            case (?text) text;
-            case null "Error: empty content in response";
+            case (?text) #ok(text);
+            case null #err("empty content in response");
           };
         };
       } catch (e) {
-        "OPENAI_RAW: " # e.message();
+        #err(e.message());
       };
     };
 
     // Retry once on timeout
     let firstResult = await doRequest();
-    if (firstResult.startsWith(#text "OPENAI_RAW: ") and firstResult.contains(#text "timed out")) {
-      await doRequest();
-    } else {
-      firstResult;
+    switch (firstResult) {
+      case (#err(msg)) {
+        if (msg.contains(#text "timed out")) {
+          await doRequest();
+        } else {
+          firstResult;
+        };
+      };
+      case (#ok(_)) firstResult;
     };
   };
 
@@ -101,17 +106,24 @@ module {
   ) : async Text {
     let systemPrompt = "You are a helpful CatFinity tutor. The user is studying the lesson \""
       # lessonName # "\".";
-    let response = await callOpenAI(systemPrompt, question, userApiKey, transformFn);
+    let result = await callOpenAI(systemPrompt, question, userApiKey, transformFn);
 
-    // Append to per-lesson history (caller → lessonId → List<QA>)
-    let callerMap = getOrInsert<Principal, Map.Map<Text, List.List<QA>>>(
-      qaHistoryPerLesson, Principal.compare, caller, func() = Map.empty<Text, List.List<QA>>(),
-    );
-    let list = getOrInsert<Text, List.List<QA>>(
-      callerMap, Text.compare, lessonId, func() = List.empty<QA>(),
-    );
-    list.add({ question; response; at = Time.now() });
-    response;
+    // On success: append to history and return answer. On error: return error message without polluting history.
+    let answer = switch (result) {
+      case (#ok(text)) {
+        // Append to per-lesson history (caller → lessonId → List<QA>)
+        let callerMap = getOrInsert<Principal, Map.Map<Text, List.List<QA>>>(
+          qaHistoryPerLesson, Principal.compare, caller, func() = Map.empty<Text, List.List<QA>>(),
+        );
+        let list = getOrInsert<Text, List.List<QA>>(
+          callerMap, Text.compare, lessonId, func() = List.empty<QA>(),
+        );
+        list.add({ question; response = text; at = Time.now() });
+        text;
+      };
+      case (#err(msg)) msg;
+    };
+    answer;
   };
 
   /// Ask a question on the global landing-page panel.
@@ -125,14 +137,21 @@ module {
     transformFn : TransformFn,
   ) : async Text {
     let systemPrompt = "You are a helpful CatFinity tutor responding on the landing page.";
-    let response = await callOpenAI(systemPrompt, question, userApiKey, transformFn);
+    let result = await callOpenAI(systemPrompt, question, userApiKey, transformFn);
 
-    // Append to global history (caller → List<QA>)
-    let list = getOrInsert<Principal, List.List<QA>>(
-      qaHistoryGlobal, Principal.compare, caller, func() = List.empty<QA>(),
-    );
-    list.add({ question; response; at = Time.now() });
-    response;
+    // On success: append to history and return answer. On error: return error message without polluting history.
+    let answer = switch (result) {
+      case (#ok(text)) {
+        // Append to global history (caller → List<QA>)
+        let list = getOrInsert<Principal, List.List<QA>>(
+          qaHistoryGlobal, Principal.compare, caller, func() = List.empty<QA>(),
+        );
+        list.add({ question; response = text; at = Time.now() });
+        text;
+      };
+      case (#err(msg)) msg;
+    };
+    answer;
   };
 
   /// Returns the Q&A history for a specific caller+lesson pair, oldest first.
