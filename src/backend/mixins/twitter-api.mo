@@ -2,7 +2,6 @@
 // Tweet posting uses the x-client Mops package (TweetsApi.createPosts).
 // OAuth token exchange uses raw HTTP (x-client has no OAuth2 token endpoint API).
 import Time "mo:core/Time";
-import Debug "mo:core/Debug";
 import Text "mo:core/Text";
 import Int "mo:core/Int";
 import Blob "mo:core/Blob";
@@ -256,12 +255,9 @@ mixin (
     lessonTitle : Text,
   ) : async Types.TweetResult {
     // Get tokens
-    var tokens = switch (TwitterLib.getTokens(tokenMap, caller)) {
-      case (?t) t;
-      case null {
-        return #err("Not connected to X. Please connect your Twitter/X account in Settings.");
-      };
-    };
+    let ?tokens0 = TwitterLib.getTokens(tokenMap, caller)
+      else return #err("Not connected to X. Please connect your Twitter/X account in Settings.");
+    var tokens = tokens0;
 
     // Auto-refresh if expired
     if (TwitterLib.isExpired(tokens, Time.now())) {
@@ -272,59 +268,44 @@ mixin (
       if (not refreshed) {
         return #err("Failed to refresh X access token. Please reconnect your X account.");
       };
-      tokens := switch (TwitterLib.getTokens(tokenMap, caller)) {
-        case (?t) t;
-        case null {
-          return #err("Token refresh succeeded but tokens missing. Please reconnect your X account.");
-        };
-      };
+      let ?refreshedTokens = TwitterLib.getTokens(tokenMap, caller)
+        else return #err("Token refresh succeeded but tokens missing. Please reconnect your X account.");
+      tokens := refreshedTokens;
     };
 
     // Build tweet text
     let lessonUrl = "https://catfinity.app/lesson/" # lessonId;
     let tweetText = "I just completed \"" # lessonTitle # "\" on CatFinity — a tutorial on (∞,1)-categories! 🎓 " # lessonUrl # " #Mathematics #CategoryTheory #CatFinity";
 
-    // Build x-client config with bearer token auth and is_replicated = ?false
-    let tweetConfig : XConfig.Config = {
-      XConfig.defaultConfig with
-      auth = ?#bearer(tokens.accessToken);
-      is_replicated = ?false;
-      cycles = 25_000_000_000;
-    };
-
     // Build TweetCreateRequest — only text_ is needed; all other fields are null
     let tweetReq = { TweetCreateRequest.JSON.init {} with text_ = ?tweetText };
 
-    try {
-      let response = await* TweetsApi.createPosts(tweetConfig, tweetReq);
-      let tweetId = switch (response.data) {
-        case (?d) d.id;
-        case null "unknown";
+    // Shared POST closure — builds config from the given access token and calls the API
+    let doPost = func(accessToken : Text) : async* Types.TweetResult {
+      let cfg : XConfig.Config = {
+        XConfig.defaultConfig with
+        auth = ?#bearer(accessToken);
+        is_replicated = ?false;
+        cycles = 25_000_000_000;
       };
+      let response = await* TweetsApi.createPosts(cfg, tweetReq);
+      let tweetId = switch (response.data) { case (?d) d.id; case null "unknown" };
       #ok("Tweet posted successfully! Tweet ID: " # tweetId);
+    };
+
+    try {
+      await* doPost(tokens.accessToken);
     } catch (e) {
-      Debug.print("RAW reject: " # e.message());
       let msg = e.message();
       // On 401/403 attempt one token refresh and retry
       if (msg.contains(#text "HTTP 401") or msg.contains(#text "HTTP 403")) {
         if (tokens.refreshToken != "") {
           let refreshed = await* refreshAccessToken(caller, tokens.refreshToken);
           if (refreshed) {
-            let freshTokens = switch (TwitterLib.getTokens(tokenMap, caller)) {
-              case (?t) t;
-              case null { return #err("Token refresh succeeded but tokens missing.") };
-            };
-            let retryConfig : XConfig.Config = {
-              tweetConfig with
-              auth = ?#bearer(freshTokens.accessToken);
-            };
+            let ?freshTokens = TwitterLib.getTokens(tokenMap, caller)
+              else return #err("Token refresh succeeded but tokens missing.");
             try {
-              let retryResponse = await* TweetsApi.createPosts(retryConfig, tweetReq);
-              let retryId = switch (retryResponse.data) {
-                case (?d) d.id;
-                case null "unknown";
-              };
-              return #ok("Tweet posted successfully! Tweet ID: " # retryId);
+              return await* doPost(freshTokens.accessToken);
             } catch (e2) {
               return #err("Tweet failed after token refresh: " # e2.message());
             };
