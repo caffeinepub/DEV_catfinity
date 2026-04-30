@@ -77,16 +77,12 @@ module {
     };
 
     // Retry once on timeout
-    let firstResult = await doRequest();
-    switch (firstResult) {
+    switch (await doRequest()) {
       case (#err(msg)) {
-        if (msg.contains(#text "timed out")) {
-          await doRequest();
-        } else {
-          firstResult;
-        };
+        if (msg.contains(#text "timed out")) await doRequest()
+        else #err(msg);
       };
-      case (#ok(_)) firstResult;
+      case ok ok;
     };
   };
 
