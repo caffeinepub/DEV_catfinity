@@ -204,21 +204,15 @@ mixin (
         let refreshToken = extractJsonField(responseText, "refresh_token");
         let expiresInText = extractJsonField(responseText, "expires_in");
 
-        switch (accessToken) {
-          case (?at) {
-            let rt = switch (refreshToken) { case (?r) r; case null "" };
-            let expiresIn : Int = switch (expiresInText) {
-              case (?s) switch (Int.fromText(s)) { case (?n) n; case null 7200 };
-              case null 7200;
-            };
-            let expiresAt = Time.now() + expiresIn * 1_000_000_000;
-            TwitterLib.storeTokens(tokenMap, caller, at, rt, expiresAt);
-            #ok("Connected to X successfully.");
-          };
-          case null {
-            #err("Token exchange failed: could not parse access_token. Response: " # responseText);
-          };
+        let ?at = accessToken else return #err("Token exchange failed: could not parse access_token. Response: " # responseText);
+        let rt = switch (refreshToken) { case (?r) r; case null "" };
+        let expiresIn : Int = switch (expiresInText) {
+          case (?s) switch (Int.fromText(s)) { case (?n) n; case null 7200 };
+          case null 7200;
         };
+        let expiresAt = Time.now() + expiresIn * 1_000_000_000;
+        TwitterLib.storeTokens(tokenMap, caller, at, rt, expiresAt);
+        #ok("Connected to X successfully.");
       } else {
         #err("Token exchange HTTP error " # response.status.toText() # ": " # responseText);
       };
