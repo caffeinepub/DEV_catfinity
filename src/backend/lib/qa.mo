@@ -3,6 +3,7 @@ import Map "mo:core/Map";
 import List "mo:core/List";
 import Time "mo:core/Time";
 import Text "mo:core/Text";
+import Principal "mo:core/Principal";
 import Types "../types/qa";
 
 // openai-client imports
@@ -17,7 +18,16 @@ module {
 
   // ── IC management canister types (used in transformFn signature) ──────────
 
-  type HttpHeader = { name : Text; value : Text };
+  type IcResponse = { status : Nat; headers : [{ name : Text; value : Text }]; body : Blob };
+  type TransformFn = shared query ({ response : IcResponse; context : Blob }) -> async IcResponse;
+
+  // ── get-or-insert helper ─────────────────────────────────────────────────
+
+  func getOrInsert<K, V>(m : Map.Map<K, V>, compare : (K, K) -> {#less; #equal; #greater}, k : K, mk : () -> V) : V =
+    switch (m.get(k)) {
+      case (?v) v;
+      case null { let v = mk(); m.add(k, v); v };
+    };
 
   // ── OpenAI call ──────────────────────────────────────────────────────────
 
@@ -28,7 +38,7 @@ module {
     systemPrompt : Text,
     userMessage : Text,
     userApiKey : Text,
-    transformFn : shared query ({ response : { status : Nat; headers : [HttpHeader]; body : Blob }; context : Blob }) -> async { status : Nat; headers : [HttpHeader]; body : Blob },
+    transformFn : TransformFn,
   ) : async Text {
     let config : OpenAIConfig.Config = {
       OpenAIConfig.defaultConfig with
@@ -87,29 +97,19 @@ module {
     lessonName : Text,
     question : Text,
     userApiKey : Text,
-    transformFn : shared query ({ response : { status : Nat; headers : [HttpHeader]; body : Blob }; context : Blob }) -> async { status : Nat; headers : [HttpHeader]; body : Blob },
+    transformFn : TransformFn,
   ) : async Text {
     let systemPrompt = "You are a helpful CatFinity tutor. The user is studying the lesson \""
       # lessonName # "\".";
     let response = await callOpenAI(systemPrompt, question, userApiKey, transformFn);
 
     // Append to per-lesson history (caller → lessonId → List<QA>)
-    let callerMap = switch (qaHistoryPerLesson.get(caller)) {
-      case (?m) m;
-      case null {
-        let m = Map.empty<Text, List.List<QA>>();
-        qaHistoryPerLesson.add(caller, m);
-        m;
-      };
-    };
-    let list = switch (callerMap.get(lessonId)) {
-      case (?l) l;
-      case null {
-        let l = List.empty<QA>();
-        callerMap.add(lessonId, l);
-        l;
-      };
-    };
+    let callerMap = getOrInsert<Principal, Map.Map<Text, List.List<QA>>>(
+      qaHistoryPerLesson, Principal.compare, caller, func() = Map.empty<Text, List.List<QA>>(),
+    );
+    let list = getOrInsert<Text, List.List<QA>>(
+      callerMap, Text.compare, lessonId, func() = List.empty<QA>(),
+    );
     list.add({ question; response; at = Time.now() });
     response;
   };
@@ -122,20 +122,15 @@ module {
     caller : Principal,
     question : Text,
     userApiKey : Text,
-    transformFn : shared query ({ response : { status : Nat; headers : [HttpHeader]; body : Blob }; context : Blob }) -> async { status : Nat; headers : [HttpHeader]; body : Blob },
+    transformFn : TransformFn,
   ) : async Text {
     let systemPrompt = "You are a helpful CatFinity tutor responding on the landing page.";
     let response = await callOpenAI(systemPrompt, question, userApiKey, transformFn);
 
     // Append to global history (caller → List<QA>)
-    let list = switch (qaHistoryGlobal.get(caller)) {
-      case (?l) l;
-      case null {
-        let l = List.empty<QA>();
-        qaHistoryGlobal.add(caller, l);
-        l;
-      };
-    };
+    let list = getOrInsert<Principal, List.List<QA>>(
+      qaHistoryGlobal, Principal.compare, caller, func() = List.empty<QA>(),
+    );
     list.add({ question; response; at = Time.now() });
     response;
   };
